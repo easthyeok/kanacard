@@ -3,7 +3,7 @@ const elements=new Map(),storage=new Map(),timers=[];
 function element(){return{dataset:{},disabled:false,innerHTML:'',textContent:'',classList:{add(){},remove(){},toggle(){},contains(){return true}},setAttribute(){},querySelector(){return null},querySelectorAll(){return[]},focus(){}}}
 const document={activeElement:null,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},querySelectorAll(){return[]},addEventListener(){}};
 const ctx={setTimeout:fn=>{timers.push(fn);return timers.length},document,console,SpeechSynthesisUtterance:function(){},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
-for(const name of ['lessons.js','portraits.js','core.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),ctx,{filename:name});
+for(const name of ['lessons.js','portraits.js','world-config.js','core.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),ctx,{filename:name});
 assert(elements.get('screen').innerHTML.includes('새 탐험 시작'));
 vm.runInContext(`
 for(stage=0;stage<5;stage++){
@@ -18,11 +18,11 @@ for(const range of [5,15,46])for(const length of [2,3,4]){stage=0;run=G.createRu
 assert(storage.has('kotoba-run-v2'));
 console.log('PASS: real script load order, setup/combat/feedback rendering, 5 chapters, 900 kana questions, full kana coverage, persistence');
 const restored={...ctx,window:null,globalThis:null};restored.window=restored;restored.globalThis=restored;vm.createContext(restored);
-for(const name of ['lessons.js','portraits.js','core.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),restored,{filename:name});
+for(const name of ['lessons.js','portraits.js','world-config.js','core.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),restored,{filename:name});
 assert(elements.get('screen').innerHTML.includes('저장한 탐험 계속'));
 vm.runInContext(`menu=false;stage=run.lesson;G.enter(run,'battle');run.hand=['strike'];G.selectCard(run,0,makeQuestion());persist();`,restored);
 const reload={document,console,localStorage:ctx.localStorage};reload.window=reload;reload.globalThis=reload;vm.createContext(reload);
-for(const name of ['lessons.js','portraits.js','core.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),reload,{filename:name});
+for(const name of ['lessons.js','portraits.js','world-config.js','core.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),reload,{filename:name});
 vm.runInContext(`menu=false;render();if(run.phase!=='question'||modalKind!=='question')throw Error('question restore');answer(run.pending.question.choices.indexOf(run.pending.question.answer));if(run.phase!=='feedback')throw Error('restored answer');`,reload);
 console.log('PASS: reload saved run, restore pending question and answer');
 
@@ -144,14 +144,16 @@ timers.shift()();
 vm.runInContext(`if(battleFx||run.phase!=='combat'||run.energy!==1)throw Error('new player turn');for(const skin of ['slime','mushroom','snail','stump','mushmom','balrog','pinkbean'])if(!drawKanaMonster({skin}).includes('monster-'+skin))throw Error('monster rendering')`,ctx);
 console.log('PASS: player animation → one enemy action → next player turn, all seven monster illustrations');
 vm.runInContext(`
- window.matchMedia=()=>({matches:true});menu=false;modalKind=null;run=G.createRun('mage',0,5,2);G.enter(run,'battle');run.hand=['strike','guard'];
- const initial=JSON.stringify({energy:run.energy,hand:run.hand,kanaBag:run.kanaBag,total:run.total});
- chooseCard(0);if(modalKind!=='card-preview'||run.phase!=='combat'||run.pending)throw Error('preview prematurely played card');
- if(!document.getElementById('modal-body').innerHTML.includes('이 카드 사용'))throw Error('preview use button missing');
- closeModal();if(JSON.stringify({energy:run.energy,hand:run.hand,kanaBag:run.kanaBag,total:run.total})!==initial)throw Error('preview cancel changed state');
- chooseCard(1);if(!document.getElementById('modal-body').innerHTML.includes('종이 방패'))throw Error('preview wrong card');
- if(!usePreviewCard(1)||run.phase!=='question'||run.pending.cardId!=='guard')throw Error('preview confirmation');
- if(usePreviewCard(1)!==false)throw Error('duplicate confirmation');
- G.cancelQuestion(run);modalKind=null;window.matchMedia=()=>({matches:false});chooseCard(0);if(run.phase!=='question')throw Error('landscape selection changed');delete window.matchMedia;
+ for(const portrait of [true,false]){window.matchMedia=()=>({matches:portrait});menu=false;modalKind=null;run=G.createRun('mage',0,5,2);G.enter(run,'battle');run.hand=['strike'];chooseCard(0);if(run.phase!=='question')throw Error('direct card selection');G.cancelQuestion(run)}delete window.matchMedia;
 `,ctx);
-console.log('PASS: portrait tap preview, no action/question spent on cancel, explicit use, duplicate lock and landscape direct selection');
+console.log('PASS: restored direct card selection in portrait and landscape');
+vm.runInContext(`
+ function worldFixture(kind){menu=false;modalKind=null;run=G.createExpedition('knight',0,46,3,123);W.beginRegion(run);const n=run.world.map.flat().find(n=>n.kind===kind);if(n.row){const prev=run.world.map[n.row-1].find(p=>p.next.includes(n.id));run.world.current=prev.id;run.world.step=n.row;run.floor=n.row}G.enter(run,n.id);render()}
+ for(const [kind,text] of [['shop','황혼 상인'],['rest','모닥불 곁에서'],['event','그냥 지나가기'],['treasure','보물 열기'],['challenge','기억의 시험']]){worldFixture(kind);if(!document.getElementById('screen').innerHTML.includes(text))throw Error('missing world scene '+kind)}
+ const q=run.challenge.question,oldCorrect=stats.correct,oldTotal=run.total;answerChallenge(q.choices.indexOf(q.answer));if(stats.correct!==oldCorrect+1||run.total!==oldTotal+1)throw Error('challenge learning stats');answerChallenge(0);if(run.total!==oldTotal+1)throw Error('duplicate challenge');
+ persist();
+`,ctx);
+const worldReload={document,console,setTimeout:ctx.setTimeout,localStorage:ctx.localStorage};worldReload.window=worldReload;worldReload.globalThis=worldReload;vm.createContext(worldReload);
+for(const name of ['lessons.js','portraits.js','world-config.js','core.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),worldReload,{filename:name});
+vm.runInContext(`menu=false;render();if(run.version!==3||run.phase!=='challenge'||!run.challenge.result.ok)throw Error('challenge save restore');worldAction('challenge-next');if(run.challenge.result||!run.challenge.question)throw Error('next challenge question');menu=true;start();if(run.version!==3||run.phase!=='region-intro')throw Error('new expedition');worldAction('begin');if(!document.getElementById('screen').innerHTML.includes('branch-map'))throw Error('branch map UI');G.enter(run,G.route(run)[0]);render();if(!document.getElementById('screen').innerHTML.includes('region-sky'))throw Error('regional backdrop');`,worldReload);
+console.log('PASS: five expedition scenes, challenge learning/persistence, v3 reload, region entry, branching map and regional battle background');

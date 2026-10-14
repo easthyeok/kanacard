@@ -1,0 +1,9 @@
+/* Lightweight procedural ambient loops. Audio starts only after the player's tap. */
+(function(root){'use strict';let enabled=false,context=null,timer=null,current=-1,step=0,pending=false,generation=0;
+try{enabled=JSON.parse(localStorage.getItem('kanacard-music'))===true}catch(e){}
+function stop(){generation++;pending=false;if(timer){clearInterval(timer);timer=null}if(context&&context.state==='running')context.suspend().catch(()=>{})}
+function note(){if(!context||context.state!=='running')return;const r=KanaConfig.regions[current],midi=r.notes[step++%r.notes.length],osc=context.createOscillator(),gain=context.createGain(),now=context.currentTime;osc.type=current===4?'triangle':'sine';osc.frequency.value=440*Math.pow(2,(midi-69)/12);gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(.025,now+.12);gain.gain.exponentialRampToValueAtTime(.001,now+.85);osc.connect(gain);gain.connect(context.destination);osc.start(now);osc.stop(now+.9);osc.onended=()=>{osc.disconnect();gain.disconnect()}}
+function sync(region){if(!enabled||region===null||document.hidden){stop();return}if(current===region&&(timer||pending))return;stop();current=region;step=0;const Audio=root.AudioContext||root.webkitAudioContext;if(!Audio)return;context=context||new Audio();pending=true;const ticket=generation;context.resume().then(()=>{if(ticket!==generation)return;pending=false;if(!enabled||document.hidden||current!==region)return;note();timer=setInterval(note,KanaConfig.regions[region].tempo)}).catch(()=>{if(ticket===generation)pending=false})}
+function toggle(region){enabled=!enabled;try{localStorage.setItem('kanacard-music',JSON.stringify(enabled))}catch(e){}sync(region);return enabled}
+root.KanaMusic={sync,toggle,get enabled(){return enabled}};document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();else if(enabled&&current>=0)sync(current)});
+})(globalThis);
