@@ -3,7 +3,7 @@ const elements=new Map(),storage=new Map(),timers=[];
 function element(){return{dataset:{},disabled:false,innerHTML:'',textContent:'',classList:{add(){},remove(){},toggle(){},contains(){return true}},setAttribute(){},querySelector(){return null},querySelectorAll(){return[]},focus(){}}}
 const document={activeElement:null,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},querySelectorAll(){return[]},addEventListener(){}};
 const ctx={setTimeout:fn=>{timers.push(fn);return timers.length},document,console,SpeechSynthesisUtterance:function(){},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
-for(const name of ['lessons.js','portraits.js','world-config.js','core.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),ctx,{filename:name});
+for(const name of ['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),ctx,{filename:name});
 assert(elements.get('screen').innerHTML.includes('새 탐험 시작'));
 vm.runInContext(`
 for(stage=0;stage<5;stage++){
@@ -18,11 +18,11 @@ for(const range of [5,15,46])for(const length of [2,3,4]){stage=0;run=G.createRu
 assert(storage.has('kotoba-run-v2'));
 console.log('PASS: real script load order, setup/combat/feedback rendering, 5 chapters, 900 kana questions, full kana coverage, persistence');
 const restored={...ctx,window:null,globalThis:null};restored.window=restored;restored.globalThis=restored;vm.createContext(restored);
-for(const name of ['lessons.js','portraits.js','world-config.js','core.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),restored,{filename:name});
+for(const name of ['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),restored,{filename:name});
 assert(elements.get('screen').innerHTML.includes('저장한 탐험 계속'));
 vm.runInContext(`menu=false;stage=run.lesson;G.enter(run,'battle');run.hand=['strike'];G.selectCard(run,0,makeQuestion());persist();`,restored);
 const reload={document,console,localStorage:ctx.localStorage};reload.window=reload;reload.globalThis=reload;vm.createContext(reload);
-for(const name of ['lessons.js','portraits.js','world-config.js','core.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),reload,{filename:name});
+for(const name of ['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),reload,{filename:name});
 vm.runInContext(`menu=false;render();if(run.phase!=='question'||modalKind!=='question')throw Error('question restore');answer(run.pending.question.choices.indexOf(run.pending.question.answer));if(run.phase!=='feedback')throw Error('restored answer');`,reload);
 console.log('PASS: reload saved run, restore pending question and answer');
 
@@ -149,11 +149,31 @@ vm.runInContext(`
 console.log('PASS: restored direct card selection in portrait and landscape');
 vm.runInContext(`
  function worldFixture(kind){menu=false;modalKind=null;run=G.createExpedition('knight',0,46,3,123);W.beginRegion(run);const n=run.world.map.flat().find(n=>n.kind===kind);if(n.row){const prev=run.world.map[n.row-1].find(p=>p.next.includes(n.id));run.world.current=prev.id;run.world.step=n.row;run.floor=n.row}G.enter(run,n.id);render()}
- for(const [kind,text] of [['shop','황혼 상인'],['rest','모닥불 곁에서'],['event','그냥 지나가기'],['treasure','보물 열기'],['challenge','기억의 시험']]){worldFixture(kind);if(!document.getElementById('screen').innerHTML.includes(text))throw Error('missing world scene '+kind)}
+ for(const [kind,text] of [['shop','황혼 상인'],['rest','모닥불 곁에서'],['event','지역의 특별한 만남'],['treasure','보물 열기'],['challenge','기억의 시험']]){worldFixture(kind);if(!document.getElementById('screen').innerHTML.includes(text))throw Error('missing world scene '+kind)}
  const q=run.challenge.question,oldCorrect=stats.correct,oldTotal=run.total;answerChallenge(q.choices.indexOf(q.answer));if(stats.correct!==oldCorrect+1||run.total!==oldTotal+1)throw Error('challenge learning stats');answerChallenge(0);if(run.total!==oldTotal+1)throw Error('duplicate challenge');
  persist();
 `,ctx);
 const worldReload={document,console,setTimeout:ctx.setTimeout,localStorage:ctx.localStorage};worldReload.window=worldReload;worldReload.globalThis=worldReload;vm.createContext(worldReload);
-for(const name of ['lessons.js','portraits.js','world-config.js','core.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),worldReload,{filename:name});
+for(const name of ['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),worldReload,{filename:name});
 vm.runInContext(`menu=false;render();if(run.version!==3||run.phase!=='challenge'||!run.challenge.result.ok)throw Error('challenge save restore');worldAction('challenge-next');if(run.challenge.result||!run.challenge.question)throw Error('next challenge question');menu=true;start();if(run.version!==3||run.phase!=='region-intro')throw Error('new expedition');worldAction('begin');if(!document.getElementById('screen').innerHTML.includes('branch-map'))throw Error('branch map UI');G.enter(run,G.route(run)[0]);render();if(!document.getElementById('screen').innerHTML.includes('region-sky'))throw Error('regional backdrop');`,worldReload);
 console.log('PASS: five expedition scenes, challenge learning/persistence, v3 reload, region entry, branching map and regional battle background');
+vm.runInContext(`
+ menu=true;modalKind=null;selectedHero='knight';gearHero='knight';
+ const item=Q.add(gearProfile,{slot:'armor',grade:'rare',region:0,level:0,roll:3,options:{}});Q.equip(gearProfile,'knight',item.id);start();const initialMax=run.maxHp;persist();
+ const weapon=Q.add(gearProfile,{slot:'weapon',grade:'rare',region:4,level:0,roll:3,options:{}});Q.equip(gearProfile,'knight',weapon.id);Q.apply(run,gearProfile);persist();
+ showGear();if(!document.getElementById('modal-body').innerHTML.includes('장비와 인벤토리'))throw Error('gear inventory UI');showGearItem(weapon.id);if(!document.getElementById('modal-body').innerHTML.includes('교체 후'))throw Error('gear comparison UI');
+ modalKind=null;run.phase='map';G.enter(run,G.route(run)[0]);run.enemy.hp=1;run.hand=['strike'];G.selectCard(run,0,{answer:'ok',speech:'あ',prompt:'あ',choices:['ok','no']});answer(0);persist();
+ const saved=JSON.parse(localStorage.getItem('kanacard-save-v4'));if(!saved.gear||!saved.run.gearStats||saved.run.phase!=='feedback')throw Error('atomic gear/run save');
+ const materials=gearProfile.materials;collectGearLoot();if(gearProfile.materials!==materials)throw Error('duplicate loot collect');
+ if(!window.combatActor(G.HEROES[3],run.gearVisual).includes('equipped-weapon'))throw Error('equipped weapon SVG');
+`,ctx);
+const gearReload={document,console,setTimeout:ctx.setTimeout,localStorage:ctx.localStorage};gearReload.window=gearReload;gearReload.globalThis=gearReload;vm.createContext(gearReload);
+for(const name of ['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),gearReload,{filename:name});
+vm.runInContext(`const before=run.maxHp,m=gearProfile.materials;Q.apply(run,gearProfile);if(run.maxHp!==before)throw Error('HP duplicated on reload');if(run.phase!=='feedback'||!run.pending.result.ok)throw Error('gear battle feedback restore');collectGearLoot();if(gearProfile.materials!==m)throw Error('loot repeated on reload');G.continueAfterCard(run);persist();if(gearProfile.materials!==m)throw Error('reward repeated loot');`,gearReload);
+console.log('PASS: inventory/detail UI, equip visuals, unified equipment/run save, feedback reload, no duplicated HP or loot');
+const validEnvelope=storage.get('kanacard-save-v4'),backupEnvelope=JSON.parse(storage.get('kanacard-save-v4-backup'));storage.set('kanacard-save-v4','{broken-json');
+const backupReload={document,console,setTimeout:ctx.setTimeout,localStorage:ctx.localStorage};backupReload.window=backupReload;backupReload.globalThis=backupReload;vm.createContext(backupReload);
+for(const name of ['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),backupReload,{filename:name});
+assert.equal(vm.runInContext('run.phase',backupReload),backupEnvelope.run.phase);assert.equal(vm.runInContext('gearProfile.items.length',backupReload),backupEnvelope.gear.items.length);storage.set('kanacard-save-v4',validEnvelope);
+vm.runInContext(`const mirrorBefore=localStorage.getItem('kotoba-run-v2'),canonicalBefore=localStorage.getItem('kanacard-save-v4'),oldSet=localStorage.setItem;localStorage.setItem=(key,value)=>{if(key==='kanacard-save-v4')throw Error('quota');oldSet(key,value)};persist();localStorage.setItem=oldSet;if(localStorage.getItem('kotoba-run-v2')!==mirrorBefore||localStorage.getItem('kanacard-save-v4')!==canonicalBefore)throw Error('partial save after quota failure')`,gearReload);
+console.log('PASS: corrupted primary save restores equipment/run backup and failed canonical write leaves previous saves intact');

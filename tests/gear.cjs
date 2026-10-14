@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict'),Q=require('../gear.js'),C=require('../gear-config.js'),G=require('../core.js');
+const p=Q.fresh(),spec={slot:'weapon',grade:'rare',region:0,level:0,roll:3,options:{crit:.04}};
+const a=Q.add(p,spec),b=Q.add(p,spec);assert.notEqual(a.id,b.id);assert(Q.equip(p,'mage',a.id));assert(!Q.equip(p,'fox',a.id));assert(!Q.remove(p,a.id,'sell'));assert(Q.equip(p,'mage',b.id));assert(Q.remove(p,a.id,'dismantle'));assert(p.materials>0);
+const s=G.createRun('mage',0,5,2);Q.apply(s,p,true);const max=s.maxHp;Q.apply(s,p);assert.equal(s.maxHp,max);assert.equal(s.gearStats.attack,3);s.hp-=10;Q.unequip(p,'mage','weapon');Q.apply(s,p);assert.equal(s.hp,max-10);
+p.gold=10000;p.materials=1000;const priorGold=p.gold;for(let i=0;i<10;i++)assert(Q.enhance(p,b.id));assert.equal(b.level,10);assert(p.gold<priorGold);assert(!Q.enhance(p,b.id));
+for(const slot of ['weapon','armor','charm']){const it=Q.add(p,{...spec,slot,options:{}});assert(Q.equip(p,'knight',it.id))}assert.equal(Q.totals(p,'knight').sets.forest,3);assert.equal(Q.totals(p,'knight').shield,6);
+const bad=Q.normalize({...p,items:[...p.items,p.items[0],{id:'bad',slot:'banana'}]});assert.equal(bad.items.length,p.items.length);assert(bad.recovered>=2);assert.deepEqual(Q.normalize(JSON.parse(JSON.stringify(p))).equipped,p.equipped);
+const battle=G.createRun('knight',0,5,2);G.enter(battle,'battle');battle.gearStats={attack:8,crit:0,extra:0};battle.hand=['strike'];G.selectCard(battle,0,{answer:'ok'});assert.equal(G.resolveCard(battle,'wrong').damage,9);assert(Q.locked(battle));
+console.log('PASS: unique inventory IDs, hero loadouts, equip/unequip, protected sale, +0–10 costs, set effects, recovery, no duplicate HP, wrong-answer gear damage excluded');
+const W=require('../world.js');const run=W.create('knight',0,5,2,31);run.runId='drop-test';W.beginRegion(run);G.enter(run,G.route(run)[0]);run.enemy.hp=0;run.phase='feedback';G.continueAfterCard(run);assert.equal(run.lootQueue.length,1);const loot=run.lootQueue[0],beforeMaterials=p.materials;Q.claim(p,loot);Q.claim(p,loot);assert.equal(p.materials,beforeMaterials+loot.materials);
+for(let i=0;i<100;i++){const r=Q.roll('boss','balrog',4,Math.random);assert(['rare','legendary','mythic'].includes(r.grade));assert.equal(r.region,4)}
+const high=Q.add(p,{slot:'charm',grade:'mythic',region:5,roll:6,level:10,options:{hp:12}});assert.equal(Q.normalize(p).items.find(x=>x.id===high.id).options.hp,12);
+console.log('PASS: data-driven boss drops, regional equipment, exactly-once loot/material claims and maximum option persistence');
+const critical=G.createRun('knight',0,5,2);G.enter(critical,'battle');critical.enemy.hp=critical.enemy.maxHp=999;critical.gearStats={attack:2,crit:.2,extra:.15,extraDamage:3,heal:1};critical.hp-=5;critical.hand=['strike'];G.selectCard(critical,0,{answer:'ok'});const hit=G.resolveCard(critical,'ok',()=>0);assert.equal(hit.damage,37);assert(hit.gearEffects.includes('치명타'));assert(hit.gearEffects.includes('추가 공격'));assert.equal(hit.healing,1);
+const samples=Q.fresh();for(let i=0;i<30;i++)Q.add(samples,{slot:'weapon',grade:'common',region:0,level:0,roll:1,options:{}});const vm=require('node:vm'),fs=require('node:fs'),ctx={KanaGear:Q,KanaGearConfig:C};ctx.window=ctx;vm.createContext(ctx);vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../gear-view.js'),'utf8'),ctx);assert.equal((ctx.KanaGearView.inventory(samples,'mage','all','grade',false,0).match(/class="gear-item /g)||[]).length,24);assert.equal((ctx.KanaGearView.inventory(samples,'mage','all','grade',false,1).match(/class="gear-item /g)||[]).length,6);
+console.log('PASS: correct-only critical/extra attack feedback and paged inventory render budget');
+for(const g of C.grades){const rolled=Q.roll('boss','balrog',4,()=>.2,g.id);assert.equal(Object.keys(rolled.options).length,g.options)}
+console.log('PASS: each equipment grade rolls its configured number of distinct options');
+const low={slot:'weapon',grade:'common',region:0,roll:1,level:0,options:{}};assert(Q.stats(low,1).attack>Q.stats(low,0).attack);
+console.log('PASS: first enhancement visibly increases even a common weapon stat');
