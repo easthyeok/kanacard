@@ -49,9 +49,9 @@ node tests/app.cjs
 
 ## GitHub Pages 배포
 
-저장소: https://github.com/easthyeok/KanaCard
+저장소: https://github.com/easthyeok/kanacard
 
-저장소 Settings → Pages에서 Source를 **GitHub Actions**로 선택합니다. 프로젝트 루트의 파일과 `.github/workflows/pages.yml`을 main 브랜치에 push하면 테스트 후 정적 파일만 배포합니다. 성공 시 접속 주소는 https://easthyeok.github.io/KanaCard/ 입니다.
+저장소 Settings → Pages에서 Source를 **GitHub Actions**로 선택합니다. 프로젝트 루트의 파일과 `.github/workflows/pages.yml`을 main 브랜치에 push하면 테스트 후 정적 파일만 배포합니다. 성공 시 접속 주소는 https://easthyeok.github.io/kanacard/ 입니다.
 
 이 환경에서 원격 업로드가 불가능한 경우, 네트워크가 되는 터미널에서 이 폴더를 열고 아래 순서로 실행하세요. GitHub 인증이 필요할 수 있습니다.
 
