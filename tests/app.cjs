@@ -3,7 +3,7 @@ const elements=new Map(),storage=new Map(),timers=[];
 function element(){return{dataset:{},disabled:false,innerHTML:'',textContent:'',classList:{add(){},remove(){},toggle(){},contains(){return true}},setAttribute(){},querySelector(){return null},querySelectorAll(){return[]},focus(){}}}
 const document={activeElement:null,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},querySelectorAll(){return[]},addEventListener(){}};
 const ctx={setTimeout:fn=>{timers.push(fn);return timers.length},document,console,SpeechSynthesisUtterance:function(){},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
-for(const name of ['lessons.js','portraits.js','core.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),ctx,{filename:name});
+for(const name of ['lessons.js','portraits.js','core.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),ctx,{filename:name});
 assert(elements.get('screen').innerHTML.includes('새 탐험 시작'));
 vm.runInContext(`
 for(stage=0;stage<5;stage++){
@@ -11,18 +11,18 @@ for(stage=0;stage<5;stage++){
  for(let n=0;n<60;n++){
   const q=makeQuestion();if(new Set(q.choices).size!==4||!q.choices.includes(q.answer))throw Error('invalid question');
  }
- run.hand=['strike'];G.selectCard(run,0,makeQuestion());render();const q=run.pending.question;answer(q.choices.indexOf(q.answer));if(run.phase!=='feedback'||!run.pending.result.ok)throw Error('answer flow');G.continueAfterCard(run);persist();render();
+ run.hand=['strike'];G.selectCard(run,0,makeQuestion());render();const q=run.pending.question;answer(q.choices.indexOf(q.answer));if(run.phase!=='feedback'||!run.pending.result.ok)throw Error('answer flow');G.continueAfterCard(run);if(run.phase==='enemy')G.endTurn(run);persist();render();
 }
 for(const range of [5,15,46])for(const length of [2,3,4]){stage=0;run=G.createRun('mage',stage,range,length);const seen=Array.from({length:range},nextKana);if(new Set(seen).size!==range)throw Error('coverage');for(let i=0;i<100;i++){const q=makeQuestion();if(q.keys.length!==length||new Set(q.choices).size!==4)throw Error('kana question')}}
 `,ctx);
 assert(storage.has('kotoba-run-v2'));
 console.log('PASS: real script load order, setup/combat/feedback rendering, 5 chapters, 900 kana questions, full kana coverage, persistence');
 const restored={...ctx,window:null,globalThis:null};restored.window=restored;restored.globalThis=restored;vm.createContext(restored);
-for(const name of ['lessons.js','portraits.js','core.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),restored,{filename:name});
+for(const name of ['lessons.js','portraits.js','core.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),restored,{filename:name});
 assert(elements.get('screen').innerHTML.includes('저장한 탐험 계속'));
 vm.runInContext(`menu=false;stage=run.lesson;G.enter(run,'battle');run.hand=['strike'];G.selectCard(run,0,makeQuestion());persist();`,restored);
 const reload={document,console,localStorage:ctx.localStorage};reload.window=reload;reload.globalThis=reload;vm.createContext(reload);
-for(const name of ['lessons.js','portraits.js','core.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),reload,{filename:name});
+for(const name of ['lessons.js','portraits.js','core.js','monsters.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),reload,{filename:name});
 vm.runInContext(`menu=false;render();if(run.phase!=='question'||modalKind!=='question')throw Error('question restore');answer(run.pending.question.choices.indexOf(run.pending.question.answer));if(run.phase!=='feedback')throw Error('restored answer');`,reload);
 console.log('PASS: reload saved run, restore pending question and answer');
 
@@ -84,7 +84,7 @@ vm.runInContext(`
 console.log('PASS: collection badges, persisted discoveries, filters, locked cards and starter selection');
 vm.runInContext(`for(const h of G.HEROES){const svg=window.combatActor(h);for(const joint of ['rig-torso','rig-arm','rig-wrist','rig-head','rig-leg','rig-cape','rig-weapon'])if(!svg.includes(joint))throw Error('missing joint '+joint)}`,ctx);
 console.log('PASS: all four characters render separate animated body joints and weapons');
-ctx.finishEffect=()=>timers.shift()();
+ctx.finishEffect=()=>{timers.shift()();if(timers.length)timers.shift()()};
 vm.runInContext(`
  for(const hero of G.HEROES){const rig=window.combatActor(hero);if(rig.includes('pose-strike')||rig.includes('pose-windup'))throw Error('legacy hidden pose class')}
  if(learnedWord({speech:'あ、い、う',prompt:'unused'})!=='あ・い・う')throw Error('kana projectile text');
@@ -133,3 +133,13 @@ vm.runInContext(`
  G.cancelQuestion(run);modalKind=null;render();if(document.getElementById('screen').innerHTML.includes('적의 공격! 체력 6 감소'))throw Error('stale notice returned');
 `,ctx);
 console.log('PASS: battle notice removed when quiz opens and does not return afterward');
+vm.runInContext(`
+ menu=false;modalKind=null;run=G.createRun('mage',0,5,2);G.enter(run,'battle');run.hand=['strike'];
+ const hpBefore=run.hp;G.selectCard(run,0,{answer:'ok',speech:'あ',prompt:'あ',choices:['ok','no']});answer(0);continueCard();
+ if(run.turn!==1||run.energy!==0||!battleFx.word)throw Error('single action attack');
+`,ctx);
+timers.shift()();
+vm.runInContext(`if(run.turn!==2||!battleFx||run.hp!==run.maxHp-6)throw Error('automatic enemy turn')`,ctx);
+timers.shift()();
+vm.runInContext(`if(battleFx||run.phase!=='combat'||run.energy!==1)throw Error('new player turn');for(const skin of ['slime','mushroom','snail','stump','mushmom','balrog','pinkbean'])if(!drawKanaMonster({skin}).includes('monster-'+skin))throw Error('monster rendering')`,ctx);
+console.log('PASS: player animation → one enemy action → next player turn, all seven monster illustrations');
