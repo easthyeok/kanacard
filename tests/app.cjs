@@ -1,0 +1,127 @@
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+const elements=new Map(),storage=new Map(),timers=[];
+function element(){return{dataset:{},disabled:false,innerHTML:'',textContent:'',classList:{add(){},remove(){},toggle(){},contains(){return true}},setAttribute(){},querySelector(){return null},querySelectorAll(){return[]},focus(){}}}
+const document={activeElement:null,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},querySelectorAll(){return[]},addEventListener(){}};
+const ctx={setTimeout:fn=>{timers.push(fn);return timers.length},document,console,SpeechSynthesisUtterance:function(){},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
+for(const name of ['lessons.js','portraits.js','core.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),ctx,{filename:name});
+assert(elements.get('screen').innerHTML.includes('새 탐험 시작'));
+vm.runInContext(`
+for(stage=0;stage<5;stage++){
+ run=G.createRun('mage',stage,46,3);menu=false;G.enter(run,'battle');render();
+ for(let n=0;n<60;n++){
+  const q=makeQuestion();if(new Set(q.choices).size!==4||!q.choices.includes(q.answer))throw Error('invalid question');
+ }
+ run.hand=['strike'];G.selectCard(run,0,makeQuestion());render();const q=run.pending.question;answer(q.choices.indexOf(q.answer));if(run.phase!=='feedback'||!run.pending.result.ok)throw Error('answer flow');G.continueAfterCard(run);persist();render();
+}
+for(const range of [5,15,46])for(const length of [2,3,4]){stage=0;run=G.createRun('mage',stage,range,length);const seen=Array.from({length:range},nextKana);if(new Set(seen).size!==range)throw Error('coverage');for(let i=0;i<100;i++){const q=makeQuestion();if(q.keys.length!==length||new Set(q.choices).size!==4)throw Error('kana question')}}
+`,ctx);
+assert(storage.has('kotoba-run-v2'));
+console.log('PASS: real script load order, setup/combat/feedback rendering, 5 chapters, 900 kana questions, full kana coverage, persistence');
+const restored={...ctx,window:null,globalThis:null};restored.window=restored;restored.globalThis=restored;vm.createContext(restored);
+for(const name of ['lessons.js','portraits.js','core.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),restored,{filename:name});
+assert(elements.get('screen').innerHTML.includes('저장한 탐험 계속'));
+vm.runInContext(`menu=false;stage=run.lesson;G.enter(run,'battle');run.hand=['strike'];G.selectCard(run,0,makeQuestion());persist();`,restored);
+const reload={document,console,localStorage:ctx.localStorage};reload.window=reload;reload.globalThis=reload;vm.createContext(reload);
+for(const name of ['lessons.js','portraits.js','core.js','combat-actor.js','word-effects.js','app.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',name),'utf8'),reload,{filename:name});
+vm.runInContext(`menu=false;render();if(run.phase!=='question'||modalKind!=='question')throw Error('question restore');answer(run.pending.question.choices.indexOf(run.pending.question.answer));if(run.phase!=='feedback')throw Error('restored answer');`,reload);
+console.log('PASS: reload saved run, restore pending question and answer');
+
+// Exercise animation lifecycle without real timers or a browser.
+vm.runInContext(`
+ menu=false;stage=0;run=G.createRun('mage',0,5,2);G.enter(run,'battle');
+ run.hand=['strike'];run.enemy.hp=1;G.selectCard(run,0,makeQuestion());
+ answer(run.pending.question.choices.indexOf(run.pending.question.answer));continueCard();
+ if(!battleFx?.kill||run.phase!=='feedback'||modalKind!==null)throw Error('kill animation missing');
+ if(!document.getElementById('screen').innerHTML.includes('fx-slash'))throw Error('effect markup missing');
+ const energy=run.energy;enemyTurn();continueCard();if(run.energy!==energy)throw Error('animation input lock');
+`,ctx);
+assert.equal(timers.length,1);timers.shift()();
+vm.runInContext(`
+ if(battleFx||run.phase!=='reward')throw Error('kill transition');
+ run=G.createRun('mage',0,5,2);G.enter(run,'battle');run.block=99;
+ enemyTurn();if(battleFx.kind!=='parry'||run.turn!==2)throw Error('blocked attack animation');
+`,ctx);
+timers.shift()();
+vm.runInContext(`
+ run.hp=1;run.block=0;run.enemy.intent={type:'heavy',value:99};enemyTurn();
+ if(run.phase!=='defeated'||battleFx.kind!=='enemy-hit'||!document.getElementById('screen').innerHTML.includes('battlefield'))throw Error('lethal hit animation');
+`,ctx);
+timers.shift()();
+vm.runInContext(`if(battleFx||!document.getElementById('screen').innerHTML.includes('다음 탐험을 위한 한 걸음'))throw Error('defeat transition')`,ctx);
+console.log('PASS: combat effects, duplicate input lock, kill/reward transition, full block and lethal enemy attack');
+vm.runInContext(`
+ menu=false;run=G.createRun('fox',0,5,2);G.enter(run,'battle');run.hand=['strike'];
+ G.selectCard(run,0,makeQuestion());const xpBefore=growthProfile.fox||0;
+ answer(run.pending.question.choices.indexOf(run.pending.question.answer));
+ if(growthProfile.fox!==xpBefore+10)throw Error('XP award');
+ answer(0);if(growthProfile.fox!==xpBefore+10)throw Error('duplicate XP');
+ if(JSON.parse(localStorage.getItem('kotoba-growth-v1')).fox!==growthProfile.fox)throw Error('XP save');
+ selectedHero='fox';if(!growthPanel().includes('경험치'))throw Error('growth UI');
+`,ctx);
+console.log('PASS: XP awarded once per answer, permanent profile saved, growth panel rendering');
+vm.runInContext(`
+ const measured={};document.querySelector=selector=>({
+ '.battlefield':{getBoundingClientRect:()=>({left:10}),style:{setProperty:(k,v)=>measured[k]=v}},
+ '.hero-actor':{getBoundingClientRect:()=>({right:210})},
+ '.enemy-unit svg':{getBoundingClientRect:()=>({left:510,top:100,width:160,height:170})}
+ })[selector];
+ positionBattleFx();
+ if(measured['--dash-distance']!=='338px'||measured['--impact-x']!=='580px')throw Error('contact geometry');
+ delete document.querySelector;
+ render();if(!document.getElementById('screen').innerHTML.includes('fighter-rig'))throw Error('attack pose missing');
+`,ctx);
+console.log('PASS: measured dash/contact coordinates and attack pose rendering');
+vm.runInContext(`
+ collection={strike:true,guard:true,focus:true};run=G.createRun('fox',0,5,2);run.phase='reward';run.rewards=['thunder','moon','meteor'];
+ if(!card('thunder',0,true).includes('NEW'))throw Error('discovery badge');
+ G.takeReward(run,'thunder');persist();
+ if(!collection.thunder||!JSON.parse(localStorage.getItem('kotoba-collection-v1')).thunder)throw Error('collection persistence');
+ collectionFilter='owned';showCollection();if(!document.getElementById('modal-body').innerHTML.includes('벼락의 한마디'))throw Error('owned filter');
+ collectionFilter='rare';showCollection();if(!document.getElementById('modal-body').innerHTML.includes('미발견 카드'))throw Error('locked entries');
+ keepsake='thunder';selectedHero='fox';start();if(run.deck[0]!=='thunder'||run.deck.length!==10)throw Error('keepsake starter replacement');
+ keepsake=null;collectionFilter='all';modalKind=null;
+`,ctx);
+console.log('PASS: collection badges, persisted discoveries, filters, locked cards and starter selection');
+vm.runInContext(`for(const h of G.HEROES){const svg=window.combatActor(h);for(const joint of ['rig-torso','rig-arm','rig-wrist','rig-head','rig-leg','rig-cape','rig-weapon'])if(!svg.includes(joint))throw Error('missing joint '+joint)}`,ctx);
+console.log('PASS: all four characters render separate animated body joints and weapons');
+ctx.finishEffect=()=>timers.shift()();
+vm.runInContext(`
+ for(const hero of G.HEROES){const rig=window.combatActor(hero);if(rig.includes('pose-strike')||rig.includes('pose-windup'))throw Error('legacy hidden pose class')}
+ if(learnedWord({speech:'あ、い、う',prompt:'unused'})!=='あ・い・う')throw Error('kana projectile text');
+ if(learnedWord({speech:'こんにちは',prompt:'어떻게 말할까요?'})!=='こんにちは')throw Error('expression projectile text');
+ for(const ok of [true,false]){
+  menu=false;stage=0;run=G.createRun('mage',0,5,2);G.enter(run,'battle');run.hand=['strike'];
+  G.selectCard(run,0,{prompt:'水',speech:'水',answer:'물',choices:['물','불']});
+  answer(ok?0:1);continueCard();
+  if((battleFx.word==='水')!==ok)throw Error('correct-answer projectile');
+  if(fxMarkup().includes('word-volley')!==ok)throw Error('projectile rendering');
+  finishEffect();
+ }
+`,ctx);
+
+console.log('PASS: visible rig without hidden pose classes, learned kana/expressions and correct-only word projectiles');
+
+vm.runInContext(`
+const volley=wordProjectile('あ・い・う');if((volley.match(/class="letter-shot"/g)||[]).length!==3)throw Error('individual letters');
+if(!volley.includes('--shot:2')||!volley.includes('letter-impact'))throw Error('staggered impacts');
+const long=wordProjectile('ありがとうございます。よろしくお願いします。');if((long.match(/class="letter-shot"/g)||[]).length>12)throw Error('bounded volley');
+`,ctx);
+console.log('PASS: individual glyph volley, staggered contacts and bounded long expressions');
+vm.runInContext(`
+ const flights=[];const shots=Array.from({length:3},()=>({style:{},animate:(frames,options)=>flights.push({frames,options})}));
+ const actor={getBoundingClientRect:()=>({left:100,width:100})},target={getBoundingClientRect:()=>({left:600,top:100,width:100,height:100})};
+ const layer={querySelectorAll:()=>shots};const field={getBoundingClientRect:()=>({left:0,top:0}),querySelector:s=>s==='.word-volley'?layer:s==='.hero-actor'?actor:target};
+ document.querySelector=()=>field;battleFx={word:'あいう'};animateWordVolley();
+ if(flights.length!==3||flights[0].options.duration!==650||flights[2].options.delay!==170)throw Error('native glyph animation timing');
+ if(!flights[0].frames[3].transform.includes('478px'))throw Error('native glyph destination');
+ battleFx=null;delete document.querySelector;
+`,ctx);
+console.log('PASS: native per-letter animations travel to measured enemy position with staggered timing');
+vm.runInContext(`
+ if(KanaLessons.korean.length!==46||KanaLessons.korean[KanaLessons.roma.indexOf('nu')]!=='누')throw Error('Korean reading table');
+ for(stage=0;stage<2;stage++){run=G.createRun('mage',stage,46,3);for(let n=0;n<100;n++){const q=makeQuestion();if(/[a-z]/i.test(q.answer+q.choices.join('')+q.explain))throw Error('romanization remains');if(new Set(q.choices).size!==4)throw Error('duplicate Korean choices')}}
+ const modes=[];document.body={classList:{toggle:(name,active)=>modes.push(active)}};
+ menu=false;run=G.createRun('mage',0,5,2);G.enter(run,'battle');render();if(!modes.at(-1))throw Error('battle viewport missing');
+ menu=true;render();if(modes.at(-1))throw Error('setup still in battle viewport');delete document.body;
+`,ctx);
+console.log('PASS: Korean kana readings and unique choices, viewport mode on combat and off in menu');
