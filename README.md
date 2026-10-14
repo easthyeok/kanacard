@@ -1,4 +1,4 @@
-# KanaCard · 카나카드
+# kanacard · 카나카드
 
 글자가 마법이 되는 일본어 학습 턴제 카드 게임입니다. 설치나 로그인 없이 `index.html`을 열어 플레이합니다.
 
@@ -57,7 +57,7 @@ node tests/app.cjs
 
 ```sh
 git add .
-git commit -m "Launch KanaCard"
+git commit -m "Launch kanacard"
 git push -u origin main
 ```
 

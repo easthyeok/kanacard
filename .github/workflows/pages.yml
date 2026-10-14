@@ -1,4 +1,4 @@
-name: Test and deploy KanaCard
+name: Test and deploy kanacard
 on:
   push:
     branches: [main]
