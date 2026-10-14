@@ -143,3 +143,15 @@ vm.runInContext(`if(run.turn!==2||!battleFx||run.hp!==run.maxHp-6)throw Error('a
 timers.shift()();
 vm.runInContext(`if(battleFx||run.phase!=='combat'||run.energy!==1)throw Error('new player turn');for(const skin of ['slime','mushroom','snail','stump','mushmom','balrog','pinkbean'])if(!drawKanaMonster({skin}).includes('monster-'+skin))throw Error('monster rendering')`,ctx);
 console.log('PASS: player animation → one enemy action → next player turn, all seven monster illustrations');
+vm.runInContext(`
+ window.matchMedia=()=>({matches:true});menu=false;modalKind=null;run=G.createRun('mage',0,5,2);G.enter(run,'battle');run.hand=['strike','guard'];
+ const initial=JSON.stringify({energy:run.energy,hand:run.hand,kanaBag:run.kanaBag,total:run.total});
+ chooseCard(0);if(modalKind!=='card-preview'||run.phase!=='combat'||run.pending)throw Error('preview prematurely played card');
+ if(!document.getElementById('modal-body').innerHTML.includes('이 카드 사용'))throw Error('preview use button missing');
+ closeModal();if(JSON.stringify({energy:run.energy,hand:run.hand,kanaBag:run.kanaBag,total:run.total})!==initial)throw Error('preview cancel changed state');
+ chooseCard(1);if(!document.getElementById('modal-body').innerHTML.includes('종이 방패'))throw Error('preview wrong card');
+ if(!usePreviewCard(1)||run.phase!=='question'||run.pending.cardId!=='guard')throw Error('preview confirmation');
+ if(usePreviewCard(1)!==false)throw Error('duplicate confirmation');
+ G.cancelQuestion(run);modalKind=null;window.matchMedia=()=>({matches:false});chooseCard(0);if(run.phase!=='question')throw Error('landscape selection changed');delete window.matchMedia;
+`,ctx);
+console.log('PASS: portrait tap preview, no action/question spent on cancel, explicit use, duplicate lock and landscape direct selection');
