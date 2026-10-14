@@ -50,7 +50,7 @@ async function worker(base) {
   assert.equal(networkCalls,0, 'cached shell must remain coherent until the worker updates');
   offline=false;assert.equal((await trigger({url:new URL('core.js?v=test',base).href,method:'GET',mode:'cors'})).asset,'core.js');
   offline=true;assert.equal((await trigger({url:new URL('core.js?v=test',base).href,method:'GET',mode:'cors'})).asset,'core.js','version queries must work offline');
-  for(const key of stores.get(prefix + 'v2').keys()) assert(!new URL(key).search,'room links must not enter cache');
+  for(const key of stores.get(prefix + 'v3').keys()) assert(!new URL(key).search,'room links must not enter cache');
   const start=new URL(manifest.start_url,new URL('manifest.webmanifest',base));
   assert.equal(start.href,base); assert.equal(new URL(manifest.scope,base).href,base);
 }
@@ -99,4 +99,13 @@ async function updateUI() {
  const events={},viewEvents={},sizes=[];const viewport={height:320,addEventListener:(name,fn)=>viewEvents[name]=fn};
  vm.runInNewContext(fs.readFileSync(path.join(root,'viewport.js'),'utf8'),{document:{documentElement:{style:{setProperty:(key,value)=>sizes.push([key,value])}}},window:{innerHeight:400,visualViewport:viewport,addEventListener:(name,fn)=>events[name]=fn}});
  assert.equal(sizes.at(-1)[1],'320px');viewport.height=270;viewEvents.resize();assert.equal(sizes.at(-1)[1],'270px');viewport.height=780;events.orientationchange();assert.equal(sizes.at(-1)[1],'780px');
+}
+// A 740x320 phone must fit the whole 480px arena below its header.
+{
+ const vars={},screen={clientWidth:720,style:{setProperty:(k,v)=>vars[k]=v}},classes={};
+ const env={document:{documentElement:{style:{setProperty(){}}},body:{classList:{toggle:(k,v)=>classes[k]=v}},getElementById:()=>screen,querySelector:s=>s==='body>header'?{getBoundingClientRect:()=>({height:44})}:{}},window:{innerHeight:320,innerWidth:740,visualViewport:{height:320,width:740,addEventListener(){}},getComputedStyle:()=>({paddingTop:'8',paddingBottom:'6'}),addEventListener(){}}};
+ vm.runInNewContext(fs.readFileSync(path.join(root,'viewport.js'),'utf8'),env);
+ assert(classes['fit-layout']);assert(Number(vars['--fit-scale'])<1);assert.equal(parseFloat(screen.style.height),254);assert.equal(parseFloat(vars['--fit-width'])*vars['--fit-scale'],720);
+ env.window.visualViewport={height:740,width:360};env.window.KanaFitLayout();assert.equal(classes['fit-layout'],false);assert.equal(screen.style.height,'');
+ console.log('PASS: whole arena scales into a short landscape phone and resets on portrait rotation');
 }

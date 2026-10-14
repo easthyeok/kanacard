@@ -233,3 +233,11 @@ body.combat-view{--battle-header:60px;--hand-height:clamp(205px,29dvh,255px);--c
  .combat-view .combat-layout .hand{scroll-snap-type:x proximity}.combat-view .hand-slot{scroll-snap-align:start}
  .combat-view .combat-layout .pile-bar{overflow:hidden;white-space:nowrap}.combat-view .pile-bar>span{overflow:hidden;text-overflow:ellipsis}
 }
+
+/* A fixed, complete battle canvas is scaled down as a unit on short phones. */
+body.combat-view.fit-layout{--hand-height:128px;--controls-height:44px;--actor-size:110px}
+.combat-view.fit-layout #screen{position:relative;min-height:0}
+.combat-view.fit-layout .combat-layout{position:absolute;top:0;left:0;width:var(--fit-width);height:var(--fit-height);min-height:0;transform:scale(var(--fit-scale));transform-origin:top left;grid-template-rows:18px minmax(0,1fr) 44px 128px 18px}
+.combat-view.fit-layout .hero-actor{width:95px;height:110px}.combat-view.fit-layout .combat-layout .enemy-unit>svg{height:110px;width:110px}
+.combat-view.fit-layout .combat-layout .enemy-unit>.intent{position:static;transform:none;display:table;margin:0 auto 6px}
+.recovery-link{display:block;text-align:center;font-size:11px;color:var(--gold);margin-bottom:10px}.combat-view .recovery-link{display:none}
