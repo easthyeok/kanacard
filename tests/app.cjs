@@ -125,3 +125,11 @@ vm.runInContext(`
  menu=true;render();if(modes.at(-1))throw Error('setup still in battle viewport');delete document.body;
 `,ctx);
 console.log('PASS: Korean kana readings and unique choices, viewport mode on combat and off in menu');
+vm.runInContext(`
+ menu=false;stage=0;run=G.createRun('mage',0,5,2);G.enter(run,'battle');run.notice='적의 공격! 체력 6 감소';render();
+ if(!document.getElementById('screen').innerHTML.includes('적의 공격! 체력 6 감소'))throw Error('battle notice missing');
+ run.hand=['strike'];G.selectCard(run,0,makeQuestion());render();
+ if(document.getElementById('screen').innerHTML.includes('적의 공격! 체력 6 감소')||run.notice!=='')throw Error('notice obscures quiz');
+ G.cancelQuestion(run);modalKind=null;render();if(document.getElementById('screen').innerHTML.includes('적의 공격! 체력 6 감소'))throw Error('stale notice returned');
+`,ctx);
+console.log('PASS: battle notice removed when quiz opens and does not return afterward');
