@@ -26,10 +26,12 @@ jobs:
           node tests/game.cjs
           node tests/app.cjs
           node tests/word-effects.cjs
+          node tests/pwa.cjs
       - name: Prepare public files
         run: |
           mkdir -p _site
-          cp index.html style.css lessons.js portraits.js core.js combat-actor.js word-effects.js app.js motion-preview.html _site/
+          cp index.html style.css lessons.js portraits.js core.js combat-actor.js word-effects.js app.js motion-preview.html pwa.js viewport.js sw.js manifest.webmanifest _site/
+          cp -R icons _site/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
