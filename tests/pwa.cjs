@@ -2,7 +2,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), assert = r
 const root = path.join(__dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.webmanifest'), 'utf8'));
 assert(manifest.name && manifest.short_name);
-assert.equal(manifest.display, 'standalone');assert.equal(manifest.orientation,'landscape');
+assert.equal(manifest.display, 'standalone');assert.equal(manifest.orientation,'any');
 assert.equal(manifest.prefer_related_applications, false);
 const html = fs.readFileSync(path.join(root,'index.html'),'utf8');
 assert(html.includes('rel="manifest" href="./manifest.webmanifest"'));
@@ -50,7 +50,7 @@ async function worker(base) {
   assert.equal(networkCalls,0, 'cached shell must remain coherent until the worker updates');
   offline=false;assert.equal((await trigger({url:new URL('core.js?v=test',base).href,method:'GET',mode:'cors'})).asset,'core.js');
   offline=true;assert.equal((await trigger({url:new URL('core.js?v=test',base).href,method:'GET',mode:'cors'})).asset,'core.js','version queries must work offline');
-  for(const key of stores.get(prefix + 'v1').keys()) assert(!new URL(key).search,'room links must not enter cache');
+  for(const key of stores.get(prefix + 'v2').keys()) assert(!new URL(key).search,'room links must not enter cache');
   const start=new URL(manifest.start_url,new URL('manifest.webmanifest',base));
   assert.equal(start.href,base); assert.equal(new URL(manifest.scope,base).href,base);
 }
