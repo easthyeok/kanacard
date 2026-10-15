@@ -15,7 +15,8 @@ function relicValue(s,key){return(s.relics||[]).reduce((n,id)=>n+(C.relics[id]?.
 function gainRelic(s){const pool=Object.keys(C.relics).filter(id=>!s.relics.includes(id));if(!pool.length){s.gold+=B.treasureGold;return null}const id=pick(s,pool);s.relics.push(id);return id}
 function startBattle(s,kind,rng=Math.random,chain=false){if(rng===Math.random)rng=()=>random(s);const r=region(s),w=s.world,elite=['elite','guardian'].includes(kind),boss=['boss','secret'].includes(kind),wave=s.encounter?.wave||1;const hp=Math.round((boss?E.bossHp:elite?E.eliteHp:E.normalHp)+w.region*E.regionHp+w.step*E.stepHp+(chain?(wave-1)*E.waveHp:0));const skin=boss?r.bossSkin:elite?'mushmom':r.skins[(w.step+wave-2)%r.skins.length];const names={slime:'슬라임',mushroom:'주황버섯',snail:'파란 달팽이',stump:'스텀프',mushmom:'머쉬맘',balrog:'발록',pinkbean:'핑크빈'};
  s.enemy={name:boss?(kind==='secret'?CONTENT.hiddenNames[w.region]:r.boss):elite?'보물 수호 '+names[skin]:names[skin],skin,subtitle:boss?'지역 보스':C.nodes[kind].name,kind:boss?'boss':elite?'elite':'battle',hp,maxHp:hp,attack:(boss?E.bossAttack:elite?E.eliteAttack:E.normalAttack)+w.region*E.regionAttack+(s.curses||0),block:0,weak:0,bossPhase:1,bossStyle:boss?r.id:null};
- if(kind==='guardian'){s.enemy.hp=Math.round(hp*E.guardianPower);s.enemy.maxHp=s.enemy.hp;s.enemy.attack=Math.round(s.enemy.attack*E.guardianPower)}
+ const power=s.difficulty==='master'?1.45:s.difficulty==='hard'?1.2:1;s.enemy.hp=Math.round(s.enemy.hp*power);s.enemy.maxHp=s.enemy.hp;s.enemy.attack=Math.ceil(s.enemy.attack*power);
+ if(kind==='guardian'){s.enemy.hp=Math.round(s.enemy.hp*E.guardianPower);s.enemy.maxHp=s.enemy.hp;s.enemy.attack=Math.round(s.enemy.attack*E.guardianPower)}
  if(!chain){s.poisonTurns=0;s.nextDrawPenalty=0;s.drawPile=G.shuffle(s.deck,rng);s.discard=[];s.exhaust=[];s.hand=[];s.nextDraw=0;s.empower=0;s.lastElement=null}else{s.discard.push(...s.hand);s.hand=[]}
  s.turn=0;s.block=0;s.pending=null;G.beginTurn(s,rng)
 }

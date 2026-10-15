@@ -87,7 +87,7 @@ console.log('PASS: all four characters render separate animated body joints and 
 ctx.finishEffect=()=>{timers.shift()();if(timers.length)timers.shift()()};
 vm.runInContext(`
  for(const hero of G.HEROES){const rig=window.combatActor(hero);if(rig.includes('pose-strike')||rig.includes('pose-windup'))throw Error('legacy hidden pose class')}
- if(learnedWord({speech:'あ、い、う',prompt:'unused'})!=='あ・い・う')throw Error('kana projectile text');
+ if(learnedWord({speech:'あ、い、う',prompt:'unused'})!=='あいう')throw Error('kana projectile text');
  if(learnedWord({speech:'こんにちは',prompt:'어떻게 말할까요?'})!=='こんにちは')throw Error('expression projectile text');
  for(const ok of [true,false]){
   menu=false;stage=0;run=G.createRun('mage',0,5,2);G.enter(run,'battle');run.hand=['strike'];
@@ -102,8 +102,8 @@ vm.runInContext(`
 console.log('PASS: visible rig without hidden pose classes, learned kana/expressions and correct-only word projectiles');
 
 vm.runInContext(`
-const volley=wordProjectile('あ・い・う');if((volley.match(/class="letter-shot"/g)||[]).length!==3)throw Error('individual letters');
-if(!volley.includes('--shot:2')||!volley.includes('letter-impact'))throw Error('staggered impacts');
+const volley=wordProjectile('あ・い・う');if((volley.match(/class="letter-shot"/g)||[]).length!==1)throw Error('whole reading');
+if(!volley.includes('--shot:0')||!volley.includes('letter-impact'))throw Error('staggered impacts');
 const long=wordProjectile('ありがとうございます。よろしくお願いします。');if((long.match(/class="letter-shot"/g)||[]).length>12)throw Error('bounded volley');
 `,ctx);
 console.log('PASS: individual glyph volley, staggered contacts and bounded long expressions');
@@ -177,3 +177,24 @@ for(const name of ['lessons.js','portraits.js','gear-config.js','gear.js','gear-
 assert.equal(vm.runInContext('run.phase',backupReload),backupEnvelope.run.phase);assert.equal(vm.runInContext('gearProfile.items.length',backupReload),backupEnvelope.gear.items.length);storage.set('kanacard-save-v4',validEnvelope);
 vm.runInContext(`const mirrorBefore=localStorage.getItem('kotoba-run-v2'),canonicalBefore=localStorage.getItem('kanacard-save-v4'),oldSet=localStorage.setItem;localStorage.setItem=(key,value)=>{if(key==='kanacard-save-v4')throw Error('quota');oldSet(key,value)};persist();localStorage.setItem=oldSet;if(localStorage.getItem('kotoba-run-v2')!==mirrorBefore||localStorage.getItem('kanacard-save-v4')!==canonicalBefore)throw Error('partial save after quota failure')`,gearReload);
 console.log('PASS: corrupted primary save restores equipment/run backup and failed canonical write leaves previous saves intact');
+
+vm.runInContext(`
+for(stage=5;stage<=6;stage++)for(const difficulty of ['normal','hard','master']){
+ run=G.createRun('mage',stage,46,6);run.difficulty=difficulty;
+ for(let n=0;n<150;n++){const q=makeQuestion();if(q.choices.length!==({normal:4,hard:6,master:8}[difficulty])||new Set(q.choices).size!==q.choices.length||!q.choices.includes(q.answer))throw Error('mixed choices');if(!q.keys.some(k=>k.startsWith('0-'))||!q.keys.some(k=>k.startsWith('1-')))throw Error('both scripts required');if(/[・、]/.test(q.speech))throw Error('speech pauses');}
+}
+recordRecall({keys:['0-0','0-0']},false);if(stats.recall['0-0'].streak!==0)throw Error('reset mastery');
+for(let n=0;n<5;n++)recordRecall({keys:['0-0']},true);if(stats.recall['0-0'].streak!==5)throw Error('mastery streak');
+if(KanaLessons.extendedHira.length!==104||KanaLessons.extendedKorean.length!==104)throw Error('extended table');
+`,ctx);
+console.log('PASS: 900 mixed/extended questions, difficulty choice counts, both scripts, continuous speech and mastery reset');
+
+ctx.speechSynthesis={cancel(){},speak(u){ctx.spoken=(ctx.spoken||[]).concat(u.text)}};
+ctx.SpeechSynthesisUtterance=function(text){this.text=text};
+vm.runInContext(`
+menu=false;stage=5;run=G.createRun('mage',5,46,3);G.enter(run,'battle');run.hand=['strike'];
+G.selectCard(run,0,makeQuestion());answer(run.pending.question.choices.indexOf(run.pending.question.answer));
+if(window.spoken?.length)throw Error('attack speech too early');
+const spell=run.pending.question.speech;continueCard();if(window.spoken.at(-1)!==spell)throw Error('attack speech missing');
+`,ctx);
+console.log('PASS: continuous pronunciation begins with attack, not answer feedback');
