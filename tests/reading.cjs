@@ -1,7 +1,7 @@
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const elements=new Map(),storage=new Map(),timers=[];
+const elements=new Map(),storage=new Map(),timers=[],listeners={};
 function element(){const classes=new Set(['hidden']);return{dataset:{},disabled:false,innerHTML:'',textContent:'',classList:{add:c=>classes.add(c),remove:c=>classes.delete(c),toggle(c,on){on?classes.add(c):classes.delete(c)},contains:c=>classes.has(c)},setAttribute(){},querySelector(){return null},querySelectorAll(){return[]},focus(){}};}
-const document={activeElement:null,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},querySelectorAll(){return[]},addEventListener(){}};
+const document={activeElement:null,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},querySelectorAll(){return[]},addEventListener(type,handler){listeners[type]=handler;}};
 const ctx={document,console,Date:{now:()=>100000},setTimeout:fn=>{timers.push(fn);return timers.length},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
 const scripts=['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','reading-combat.js','app.js'];
 for(const file of scripts)vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ctx,{filename:file});
@@ -9,14 +9,15 @@ function check(code){vm.runInContext(code,ctx);}
 check(`
 $('length').value='auto';start();if(run.rules!=='reading'||!run.autoLength||run.length!==2)throw Error('new run');
 if(setup().includes('collection-entry')||!$('deck-button').hidden||!$('collection-button').hidden)throw Error('card entry visible');
-W.beginRegion(run);G.enter(run,W.route(run)[0]);render();if(run.phase!=='question'||modalKind!=='question')throw Error('automatic question');
+W.beginRegion(run);G.enter(run,W.route(run)[0]);render();if(run.phase!=='question'||modalKind!==null||!$('modal').classList.contains('hidden'))throw Error('automatic question');
 if($('screen').innerHTML.includes('hand-slot')||$('screen').innerHTML.includes('data-card=')||$('modal-body').innerHTML.includes('이번 턴의 한 장'))throw Error('card combat visible');
-const firstHp=run.hp;answer(run.pending.question.choices.indexOf(run.pending.question.answer));if(!battleFx||!run.pending.result.fast)throw Error('automatic fast attack');
+if(!$('screen').innerHTML.includes('reading-panel')||!$('screen').innerHTML.includes('data-answer='))throw Error('inline question absent');
+const firstPrompt=run.pending.question.prompt;const firstHp=run.hp;answer(run.pending.question.choices.indexOf(run.pending.question.answer));if(!battleFx||!run.pending.result.fast)throw Error('automatic fast attack');if(!$('screen').innerHTML.includes('reading-panel')||!$('screen').innerHTML.includes(firstPrompt)||!$('screen').innerHTML.includes('word-volley')||!$('modal').classList.contains('hidden'))throw Error('prompt and attack must stay together');
 `);
 assert.equal(timers.length,1);timers.shift()();
 check(`if(run.phase!=='question'||run.hp!==firstHp||run.fastCombo!==1)throw Error('next question without counter');
 const wrong=run.pending.question.choices.findIndex(a=>a!==run.pending.question.answer);answer(wrong);if(run.phase!=='feedback'||battleFx||run.pending.result.damage!==0||run.fastCombo!==0)throw Error('wrong feedback');
-if(!run.reviewQueue.length)throw Error('review queue');continueCard();if(!battleFx)throw Error('counter animation');`);
+if(!run.reviewQueue.length)throw Error('review queue');continueCard();if(!battleFx)throw Error('counter animation');if(!$('screen').innerHTML.includes('reading-panel')||!$('screen').innerHTML.includes('정답을 확인'))throw Error('counter hides review');`);
 timers.shift()();
 check(`if(run.hp>=firstHp||run.phase!=='question')throw Error('counter and resume');
 run.reviewQueue=[{glyphs:['0-0','1-1'],due:run.readingCount}];const review=makeQuestion();if(review.keys.join(',')!=='0-0,1-1'||run.reviewQueue.length)throw Error('due exact review');
@@ -59,6 +60,20 @@ for(const hero of ['mage','fox','witch','knight']){
 }
 `);
 console.log('PASS: cardless UI, automatic attacks, fast combos, counters, exact delayed review, capped gear, rewards/rest/shop/events, adaptive lengths, legacy migration and four complete campaigns');
+check(`
+run=G.createExpedition('mage',0,104,3,123);R.migrate(run);W.beginRegion(run);G.enter(run,W.route(run)[0]);menu=false;render();
+`);
+let chosen=vm.runInContext('run.pending.question.choices.indexOf(run.pending.question.answer)+1',ctx);
+listeners.keydown({key:String(chosen),preventDefault(){}});
+check(`if(!battleFx||!run.pending.result.ok)throw Error('inline keyboard answer');`);
+timers.shift()();
+chosen=vm.runInContext('run.pending.question.choices.findIndex(a=>a!==run.pending.question.answer)+1',ctx);
+listeners.keydown({key:String(chosen),preventDefault(){}});
+check(`if(run.phase!=='feedback'||modalKind)throw Error('inline wrong keyboard');`);
+listeners.keydown({key:'Enter',preventDefault(){}});
+check(`if(!battleFx)throw Error('inline Enter continue');`);
+timers.shift()();
+console.log('PASS: inline numeric answers and Enter review controls without a quiz dialog');
 check(`
 // A saved timed question resumes with the same deadline in the production script order.
 run=G.createExpedition('mage',0,104,3,123);R.migrate(run);W.beginRegion(run);G.enter(run,W.route(run)[0]);menu=false;render();persist();
