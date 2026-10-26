@@ -7,7 +7,7 @@ const scripts=['lessons.js','portraits.js','gear-config.js','gear.js','gear-view
 for(const file of scripts)vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ctx,{filename:file});
 function check(code){vm.runInContext(code,ctx);}
 check(`
-$('length').value='auto';start();if(run.rules!=='reading'||!run.autoLength||run.length!==2)throw Error('new run');
+$('length').value='auto';selectedHero='fox';start();if(run.heroId!=='mage')throw Error('single fixed hero');if(setup().includes('data-hero-choice')||setup().includes('hero-grid'))throw Error('hero selection remains');if(window.KanaGearView.inventory(gearProfile,'mage','all','grade',false).includes('data-gear-hero'))throw Error('gear hero selector remains');if(run.rules!=='reading'||!run.autoLength||run.length!==2)throw Error('new run');
 if(setup().includes('collection-entry')||!$('deck-button').hidden||!$('collection-button').hidden)throw Error('card entry visible');
 W.beginRegion(run);G.enter(run,W.route(run)[0]);render();if(run.phase!=='question'||modalKind!==null||!$('modal').classList.contains('hidden'))throw Error('automatic question');
 if($('screen').innerHTML.includes('hand-slot')||$('screen').innerHTML.includes('data-card=')||$('modal-body').innerHTML.includes('이번 턴의 한 장'))throw Error('card combat visible');
@@ -87,3 +87,9 @@ const missed=run.total;updateReadingClock();if(run.total!==missed)throw Error('d
 run=G.createRun('mage',0,46,3);R.migrate(run);for(const phase of ['reward','rest','event']){run.phase=phase;if(/카드|덱|data-card/.test(scene()))throw Error('legacy card scene');}
 `,reloaded);
 console.log('PASS: production save/reload keeps timed reading battle, timeout grades once, legacy eight-floor scenes have no cards');
+
+check(`
+for(const difficulty of ['normal','hard','master']){stage=0;run=G.createExpedition('mage',0,104,3,44);R.migrate(run);run.difficulty=difficulty;for(let i=0;i<100;i++){const q=makeQuestion();if(q.choices.length!==4||new Set(q.choices).size!==4||!q.choices.includes(q.answer))throw Error('four choices '+difficulty);}}
+const oldRun=G.createExpedition('mage',0,104,3,12);oldRun.pending={question:{answer:'a',choices:['a','b','c','d','e','f','g','h'],startedAt:123},selected:'h'};oldRun.challenge={question:{answer:'b',choices:['a','b','c','d','e','f']}};R.migrate(oldRun);if(oldRun.pending.question.choices.length!==4||!oldRun.pending.question.choices.includes('a')||!oldRun.pending.question.choices.includes('h')||oldRun.pending.question.startedAt!==123||oldRun.challenge.question.choices.length!==4)throw Error('saved question reduction');
+`,ctx);
+console.log('PASS: fixed mage, no hero selectors, four choices at every difficulty, saved questions reduced without losing answers or deadlines');

@@ -181,7 +181,7 @@ console.log('PASS: corrupted primary save restores equipment/run backup and fail
 vm.runInContext(`
 for(stage=5;stage<=6;stage++)for(const difficulty of ['normal','hard','master']){
  run=G.createRun('mage',stage,46,6);run.difficulty=difficulty;
- for(let n=0;n<150;n++){const q=makeQuestion();if(q.choices.length!==({normal:4,hard:6,master:8}[difficulty])||new Set(q.choices).size!==q.choices.length||!q.choices.includes(q.answer))throw Error('mixed choices');if(!q.keys.some(k=>k.startsWith('0-'))||!q.keys.some(k=>k.startsWith('1-')))throw Error('both scripts required');if(/[・、]/.test(q.speech))throw Error('speech pauses');}
+ for(let n=0;n<150;n++){const q=makeQuestion();if(q.choices.length!==4||new Set(q.choices).size!==q.choices.length||!q.choices.includes(q.answer))throw Error('mixed choices');if(!q.keys.some(k=>k.startsWith('0-'))||!q.keys.some(k=>k.startsWith('1-')))throw Error('both scripts required');if(/[・、]/.test(q.speech))throw Error('speech pauses');}
 }
 recordRecall({keys:['0-0','0-0']},false);if(stats.recall['0-0'].streak!==0)throw Error('reset mastery');
 for(let n=0;n<5;n++)recordRecall({keys:['0-0']},true);if(stats.recall['0-0'].streak!==5)throw Error('mastery streak');

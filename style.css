@@ -416,3 +416,29 @@ body[data-region="mountain"] .monster-sprite{filter:drop-shadow(0 0 8px #a9edff6
   .combat-view .reading-battle .enemy-unit > svg { width: clamp(85px, 17dvh, 145px); height: clamp(90px, 18dvh, 150px); }
   .combat-view .reading-battle .unit { padding-bottom: 4px; }
 }
+
+/* Portrait combat keeps a clear lane between the two actors. */
+@media (orientation: portrait) and (max-width: 700px) {
+  .combat-view .combat-layout.reading-battle .battlefield {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 18% minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: end;
+    padding-inline: 3%;
+  }
+  .combat-view .reading-battle .battlefield .unit {
+    grid-row: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding-inline: 0;
+    justify-self: center;
+  }
+  .combat-view .reading-battle .battlefield .hero-unit { grid-column: 1; }
+  .combat-view .reading-battle .battlefield .enemy-unit { grid-column: 3; }
+  .combat-view .reading-battle .hero-actor { width: min(100%, 120px); height: clamp(85px, 16dvh, 130px); }
+  .combat-view .reading-battle .enemy-unit > svg { width: min(100%, 125px); height: clamp(90px, 17dvh, 135px); }
+  .combat-view .reading-battle .unit-name { max-width: 100%; font-size: 10px; }
+  .combat-view .reading-battle .enemy-unit > .intent { font-size: 9px; padding: 3px 4px; }
+}
