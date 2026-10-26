@@ -308,3 +308,10 @@ body[data-region="mountain"] .monster-sprite{filter:drop-shadow(0 0 8px #a9edff6
 /* A whole reading travels and lands as one spell. */
 .letter-shot b,.letter-impact{white-space:nowrap;font-size:clamp(18px,3.6vw,40px)}
 .letter-impact{animation-delay:.73s}.settings{flex-wrap:wrap}#stages{overflow-x:auto}#stages .stage{flex-shrink:0}
+
+#reading-clock {
+  color: #edb779;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-height: 1.5em;
+}

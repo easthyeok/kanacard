@@ -198,3 +198,40 @@ if(window.spoken?.length)throw Error('attack speech too early');
 const spell=run.pending.question.speech;continueCard();if(window.spoken.at(-1)!==spell)throw Error('attack speech missing');
 `,ctx);
 console.log('PASS: continuous pronunciation begins with attack, not answer feedback');
+
+vm.runInContext(`
+menu=true;stage=0;run=null;header();
+const stageButtons=document.getElementById('stages').innerHTML;
+if((stageButtons.match(/data-stage=/g)||[]).length!==4||/data-stage="(?:1|5|6)"/.test(stageButtons))throw Error('duplicate kana stages');
+if(setup().includes('id="range"')||!setup().includes('value="1"'))throw Error('unified setup');
+for(stage of [0,1,5,6]){
+ run=G.createRun('mage',stage,5,1);
+ const pool=kanaPool();if(pool.length!==208||!pool.some(c=>c.glyph==='ぱ')||!pool.some(c=>c.glyph==='パ'))throw Error('full pool');
+ run.studyBag=pool.map(c=>c.key);const seen=new Set();
+ for(let i=0;i<208;i++){const q=makeQuestion();if(q.reverse||q.prompt!==q.speech||q.keys.length!==1)throw Error('reading direction');q.keys.forEach(k=>seen.add(k));}
+ // Missed items may be reinserted; verify exact bag coverage without review records.
+ stats.recall={};run.studyBag=pool.map(c=>c.key);seen.clear();
+ for(let i=0;i<208;i++)makeQuestion().keys.forEach(k=>seen.add(k));
+ if(seen.size!==208)throw Error('single character coverage');
+ run.length=6;for(let i=0;i<50;i++){const q=makeQuestion();if(!q.keys.some(k=>k.startsWith('0-'))||!q.keys.some(k=>k.startsWith('1-')))throw Error('mixed script reading');}
+}
+`,ctx);
+console.log('PASS: single kana stage, full 208-item pool, one-character coverage, reading-only prompts and mixed bundles');
+
+// Use a controlled clock so deadline boundaries do not depend on machine speed.
+ctx.Date={now:()=>100000};
+vm.runInContext(`
+menu=false;stage=0;battleFx=null;modalKind=null;stats.recall={};
+function timedFixture(){run=G.createRun('mage',0,104,3);run.difficulty='hard';G.enter(run,'battle');run.hand=['strike'];chooseCard(0);return run.pending.question;}
+let tq=timedFixture();if(tq.budget!==3000||tq.startedAt!==100000)throw Error('visible question clock');
+render();if(tq.startedAt!==100000)throw Error('render reset deadline');
+tq.startedAt=99000;answer(tq.choices.indexOf(tq.answer));if(!run.pending.result.ok||!tq.fast||stats.recall[tq.keys[0]].fastStreak!==1)throw Error('fast recall');
+tq=timedFixture();tq.startedAt=97500;answer(tq.choices.indexOf(tq.answer));if(!run.pending.result.ok||tq.fast||!stats.recall[tq.keys[0]].slow)throw Error('slow correct');
+tq=timedFixture();tq.hinted=true;answer(tq.choices.indexOf(tq.answer));if(tq.fast||stats.recall[tq.keys[0]].fastStreak)throw Error('hint mastered');
+tq=timedFixture();tq.startedAt=97000;answer(tq.choices.indexOf(tq.answer));if(run.pending.result.ok||!tq.timedOut)throw Error('late correct accepted');
+tq=timedFixture();tq.startedAt=96000;updateReadingClock();if(run.phase!=='feedback'||!tq.timedOut||run.pending.result.ok)throw Error('automatic timeout');
+const total=run.total;updateReadingClock();answer(-1);if(run.total!==total)throw Error('duplicate timeout');
+tq=timedFixture();persist();if(JSON.parse(localStorage.getItem('kanacard-save-v4')).run.pending.question.startedAt!==100000)throw Error('deadline persistence');
+run.phase='challenge';run.challenge={question:makeQuestion(),answered:0,correct:0};run.gold=0;render();run.challenge.question.startedAt=96000;updateReadingClock();if(!run.challenge.question.timedOut||run.challenge.result.ok||run.challenge.answered!==1)throw Error('challenge deadline');
+`,ctx);
+console.log('PASS: visible clock, preserved deadline, fast/slow/hinted recall, late clicks, automatic timeout, exactly-once grading and timed challenge');

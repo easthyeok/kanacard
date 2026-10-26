@@ -13,6 +13,8 @@ stages.push(['교차의 서고','히라가나 + 가타카나','두 문자 체계
 const extraHira='が ぎ ぐ げ ご ざ じ ず ぜ ぞ だ ぢ づ で ど ば び ぶ べ ぼ ぱ ぴ ぷ ぺ ぽ きゃ きゅ きょ しゃ しゅ しょ ちゃ ちゅ ちょ にゃ にゅ にょ ひゃ ひゅ ひょ みゃ みゅ みょ りゃ りゅ りょ ぎゃ ぎゅ ぎょ じゃ じゅ じょ びゃ びゅ びょ ぴゃ ぴゅ ぴょ'.split(' ');
 const extraKorean='가 기 구 게 고 자 지 즈 제 조 다 지 즈 데 도 바 비 부 베 보 파 피 푸 페 포 캬 큐 쿄 샤 슈 쇼 차 추 초 냐 뉴 뇨 햐 휴 효 먀 뮤 묘 랴 류 료 갸 규 교 쟈 쥬 죠 뱌 뷰 뵤 퍄 퓨 표'.split(' ');
 const extendedHira=hira.concat(extraHira),extendedKata=extendedHira.map(s=>Array.from(s,c=>String.fromCharCode(c.charCodeAt(0)+96)).join('')),extendedKorean=korean.concat(extraKorean);
+// Keep legacy indices for saved expeditions; only stage 0 is shown for kana.
+stages[0]=['순간 읽기의 서고','가나 순간 읽기','히라가나·가타카나·탁음·반탁음·요음을 한 번에 섞어 읽습니다. 이미 아는 글자를 보자마자 소리로 연결하는 연습이에요.'];
 window.KanaLessons={extendedHira,extendedKata,extendedKorean,hira,kata,roma,korean,words,basics,talks,stages};
 
 })();
