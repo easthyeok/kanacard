@@ -315,3 +315,37 @@ body[data-region="mountain"] .monster-sprite{filter:drop-shadow(0 0 8px #a9edff6
   font-variant-numeric: tabular-nums;
   min-height: 1.5em;
 }
+
+/* Cardless reading combat: leave room for the arena and the next prompt. */
+.reading-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem 1.5rem;
+  padding: 1rem;
+  border: 1px solid #edb77955;
+  border-radius: 16px;
+  background: #142a27;
+  color: #e7e9d7;
+}
+.reading-status strong { color: #edb779; font-size: 1.4rem; }
+.reading-status small { width: 100%; text-align: center; opacity: .8; }
+.combat-view .combat-layout.reading-battle,
+.combat-view.fit-layout .combat-layout.reading-battle {
+  grid-template-rows: 24px minmax(120px, 1fr) auto;
+}
+.combat-view .reading-battle .battlefield { grid-template-rows: minmax(0, 1fr); }
+.combat-view .reading-battle .unit { padding-bottom: 16px; }
+.reading-battle .letter-shot { animation-duration: .26s; animation-delay: .03s; }
+.reading-battle .letter-impact { animation-delay: .29s; animation-duration: .18s; }
+.reading-battle .word-casting .fx-number { animation-delay: .29s; animation-duration: .2s; }
+.reading-battle .word-casting .fx-ring,
+.reading-battle .word-casting .fx-flash,
+.reading-battle .word-casting .enemy-unit svg,
+.reading-battle .battlefield.word-casting { animation-delay: .29s; }
+.reading-battle .word-casting .fx-particle { animation-delay: calc(.29s + var(--delay)); }
+.reading-battle .word-casting.enemy-falling .enemy-unit svg { animation-delay: .34s; animation-duration: .35s; }
+@media (prefers-reduced-motion: reduce) {
+  .reading-battle .letter-shot { animation: none; }
+}

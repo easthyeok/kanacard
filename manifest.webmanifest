@@ -2,7 +2,7 @@
   "id": "./",
   "name": "kanacard · 글자가 마법이 되는 모험",
   "short_name": "kanacard",
-  "description": "일본어를 배우고 글자 마법으로 싸우는 카드 모험",
+  "description": "가나를 빠르게 읽고 글자 마법으로 싸우는 읽기 모험",
   "lang": "ko",
   "start_url": "./",
   "scope": "./",
