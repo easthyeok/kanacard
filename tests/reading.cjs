@@ -3,7 +3,7 @@ const elements=new Map(),storage=new Map(),timers=[],listeners={};
 function element(){const classes=new Set(['hidden']);return{dataset:{},disabled:false,innerHTML:'',textContent:'',classList:{add:c=>classes.add(c),remove:c=>classes.delete(c),toggle(c,on){on?classes.add(c):classes.delete(c)},contains:c=>classes.has(c)},setAttribute(){},querySelector(){return null},querySelectorAll(){return[]},focus(){}};}
 const document={activeElement:null,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},querySelectorAll(){return[]},addEventListener(type,handler){listeners[type]=handler;}};
 const ctx={document,console,Date:{now:()=>100000},setTimeout:fn=>{timers.push(fn);return timers.length},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
-const scripts=['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','reading-combat.js','app.js'];
+const scripts=['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','reading-combat.js','recall.js','app.js'];
 for(const file of scripts)vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ctx,{filename:file});
 function check(code){vm.runInContext(code,ctx);}
 check(`
@@ -117,3 +117,21 @@ const warrior=G.HEROES.find(h=>h.id==='mage');if(warrior.archetype!=='warrior'||
 const item=Q.add(gearProfile,{slot:'weapon',origin:'field',grade:'rare',region:0,roll:3,options:{}});const detail=KanaGearView.detail(gearProfile,'mage',item.id,false),inventory=KanaGearView.inventory(gearProfile,'mage','all','grade',false);if(!inventory.includes('equipment-preview')||!inventory.includes('equipment-art')||!detail.includes('equipment-tryon')||!detail.includes('장착 미리보기'))throw Error('visual gear');
 `,ctx);
 console.log('PASS: one-time reset preserves learning/inventory, seven-mistake limit at every HP level, fast-only capped healing, separate 5s/3s targets, warrior art and visual gear try-on');
+
+check(`
+// Never replace all ordinary practice with targeted reviews.
+stage=0;run=G.createExpedition('mage',0,104,3,44);R.migrate(run);stats.recall={'0-0':{misses:9,lastMissAt:Date.now()}};stats.kanaAnswered=20;stats.kanaChecks=[{key:'1-1',due:0}];stats.lastKanaCheckAt=0;run.reviewQueue=[{glyphs:['0-0','1-0'],due:0}];
+const diagnosis=makeQuestion();if(!diagnosis.diagnostic||diagnosis.keys.length!==1||diagnosis.keys[0]!=='1-1'||diagnosis.choices.length!==4)throw Error('single-letter diagnosis');
+const delayed=makeQuestion();if(!delayed.targeted||delayed.keys.join(',')!=='0-0,1-0')throw Error('bundle review after diagnosis');
+const ordinary=makeQuestion();if(ordinary.targeted||ordinary.keys.length!==3)throw Error('ordinary practice guarantee');
+recordRecall({keys:['0-0','1-1'],elapsed:6000,fast:false},false);persist();const recallSave=JSON.parse(localStorage.getItem('kanacard-save-v4')).stats;
+if(!recallSave.kanaChecks.some(c=>c.key==='0-0')||!recallSave.recall['0-0'].bundleMisses)throw Error('persistent diagnosis');
+run=G.createExpedition('mage',0,104,3,45);R.migrate(run);stats.kanaAnswered+=10;stats.lastKanaCheckAt=0;const nextSession=makeQuestion();if(!nextSession.diagnostic||nextSession.keys.length!==1)throw Error('next run diagnosis');
+`,ctx);
+console.log('PASS: diagnosis uses one letter and four choices, original bundle review follows, ordinary practice is guaranteed, priorities and checks survive a new expedition');
+check(`
+run=G.createExpedition('mage',0,104,2,12);R.migrate(run);W.beginRegion(run);G.enter(run,W.route(run)[0]);run.autoLength=true;run.enemy.hp=99999;
+for(let i=0;i<12;i++){R.ask(run,{answer:'a',keys:['0-0'],fast:true,diagnostic:true});G.resolveCard(run,'a');G.continueAfterCard(run);}
+if(run.length!==2||(run.readingRecent||[]).length)throw Error('diagnosis inflated adaptive length');
+`,ctx);
+console.log('PASS: single-letter checks do not inflate automatic bundle difficulty');
