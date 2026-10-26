@@ -1,6 +1,6 @@
 'use strict';
 function drawCharacter(c,x,y,h,alpha=1,pose='idle'){
-c.save();c.translate(x,y);c.globalAlpha=alpha;if(pose==='windup')c.rotate(-.15);if(pose==='strike')c.rotate(.2);c.lineJoin='round';c.lineCap='round';
+if(h.archetype==='warrior')h={...h,id:'knight'};c.save();c.translate(x,y);c.globalAlpha=alpha;if(pose==='windup')c.rotate(-.15);if(pose==='strike')c.rotate(.2);c.lineJoin='round';c.lineCap='round';
 const ellipse=(x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill()};
 const shape=(points,color,stroke='#172726')=>{c.beginPath();points.forEach(([a,b],i)=>i?c.lineTo(a,b):c.moveTo(a,b));c.closePath();c.fillStyle=color;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=1.4;c.stroke()}};
 const line=(a,b,color,width)=>{c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(...a);c.lineTo(...b);c.stroke()};

@@ -82,7 +82,7 @@ const reloaded={...ctx,window:null,globalThis:null};reloaded.window=reloaded;rel
 for(const file of scripts)vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),reloaded,{filename:file});
 vm.runInContext(`
 if(run.rules!=='reading'||run.phase!=='question'||run.pending.question.startedAt!==100000)throw Error('production reload');
-menu=false;render();run.pending.question.startedAt=96000;updateReadingClock();if(run.phase!=='feedback'||run.pending.result.ok||!run.pending.question.timedOut)throw Error('production timeout');
+menu=false;render();run.pending.question.startedAt=94000;updateReadingClock();if(run.phase!=='feedback'||run.pending.result.ok||!run.pending.question.timedOut)throw Error('production timeout');
 const missed=run.total;updateReadingClock();if(run.total!==missed)throw Error('duplicate timeout');
 run=G.createRun('mage',0,46,3);R.migrate(run);for(const phase of ['reward','rest','event']){run.phase=phase;if(/카드|덱|data-card/.test(scene()))throw Error('legacy card scene');}
 `,reloaded);
@@ -93,3 +93,27 @@ for(const difficulty of ['normal','hard','master']){stage=0;run=G.createExpediti
 const oldRun=G.createExpedition('mage',0,104,3,12);oldRun.pending={question:{answer:'a',choices:['a','b','c','d','e','f','g','h'],startedAt:123},selected:'h'};oldRun.challenge={question:{answer:'b',choices:['a','b','c','d','e','f']}};R.migrate(oldRun);if(oldRun.pending.question.choices.length!==4||!oldRun.pending.question.choices.includes('a')||!oldRun.pending.question.choices.includes('h')||oldRun.pending.question.startedAt!==123||oldRun.challenge.question.choices.length!==4)throw Error('saved question reduction');
 `,ctx);
 console.log('PASS: fixed mage, no hero selectors, four choices at every difficulty, saved questions reduced without losing answers or deadlines');
+
+check(`
+// Character reset is atomic with the normal save bundle and runs only once.
+const resetStats={correct:42},resetGrowth={mage:999,fox:300},resetGear=Q.fresh();resetGear.equipped.mage.weapon='kept-item';resetGear.items=[{id:'kept-item'}];
+const resetRun=G.createExpedition('mage',0,104,3,42);R.migrate(resetRun);resetRun.hp=250;resetRun.maxHp=400;resetRun.readingPower=6;resetRun.readingWard=4;resetRun.relics=['leaf'];resetRun.blessings=8;
+if(!R.resetCharacter(resetStats,resetGrowth,resetGear,resetRun)||resetGrowth.mage!==0||resetRun.hp!==60||resetRun.maxHp!==60||resetRun.readingPower||resetRun.blessings||resetGear.equipped.mage.weapon||resetGear.items.length!==1||resetStats.correct!==42)throw Error('character reset');
+resetGrowth.mage=100;resetGear.equipped.mage.weapon='kept-item';if(R.resetCharacter(resetStats,resetGrowth,resetGear,resetRun)||resetGrowth.mage!==100||!resetGear.equipped.mage.weapon)throw Error('repeat reset');
+// Upgraded characters cannot become immune to mistakes.
+for(const maxHp of [60,200,1000]){
+ run=G.createExpedition('mage',0,104,3,31);R.migrate(run);W.beginRegion(run);G.enter(run,W.route(run)[0]);run.hp=run.maxHp=maxHp;run.block=999;run.gearStats={block:999,reduce:999};run.blessings=999;run.enemy.hp=99999;let misses=0;
+ while(run.phase!=='defeated'&&misses<10){R.ask(run,{answer:'a',fast:false});G.resolveCard(run,'wrong');const before=run.hp;G.continueAfterCard(run);G.endTurn(run);misses++;if(before-run.hp<Math.min(before,Math.ceil(maxHp*.08)))throw Error('immune to mistakes');}
+ if(run.phase!=='defeated'||misses>7)throw Error('immortal upgraded character');
+}
+// Correct answers break the mistake streak; only fast streaks recover HP.
+run=G.createExpedition('mage',0,104,3,16);R.migrate(run);W.beginRegion(run);G.enter(run,W.route(run)[0]);run.enemy.hp=99999;run.hp=20;run.gearStats={heal:3};run.mistakeStreak=4;
+R.ask(run,{answer:'a',fast:false});G.resolveCard(run,'a');if(run.hp!==20||run.mistakeStreak!==0)throw Error('slow healing/streak reset');G.continueAfterCard(run);
+let restored=0;for(let i=0;i<30;i++){R.ask(run,{answer:'a',fast:true});restored+=G.resolveCard(run,'a').healing;G.continueAfterCard(run);}if(restored!==6||run.battleHealing!==6)throw Error('healing cap');
+// Separate answer deadline from fast-recall target.
+run.difficulty='hard';const timeQ={keys:['0-0','0-1','0-2'],startedAt:96000,budget:5000,fastBudget:3000};if(readingBudget(timeQ)!==5000||readingFastBudget(timeQ)!==3000||finishReading(timeQ)||timeQ.fast)throw Error('slow allowed answer');
+timeQ.startedAt=97000;if(finishReading(timeQ)||!timeQ.fast)throw Error('fast boundary');timeQ.startedAt=95000;if(!finishReading(timeQ))throw Error('deadline boundary');
+const warrior=G.HEROES.find(h=>h.id==='mage');if(warrior.archetype!=='warrior'||!combatActor(warrior).includes('warrior-plate')||!combatActor(warrior).includes('warrior-blade'))throw Error('warrior appearance');
+const item=Q.add(gearProfile,{slot:'weapon',origin:'field',grade:'rare',region:0,roll:3,options:{}});const detail=KanaGearView.detail(gearProfile,'mage',item.id,false),inventory=KanaGearView.inventory(gearProfile,'mage','all','grade',false);if(!inventory.includes('equipment-preview')||!inventory.includes('equipment-art')||!detail.includes('equipment-tryon')||!detail.includes('장착 미리보기'))throw Error('visual gear');
+`,ctx);
+console.log('PASS: one-time reset preserves learning/inventory, seven-mistake limit at every HP level, fast-only capped healing, separate 5s/3s targets, warrior art and visual gear try-on');

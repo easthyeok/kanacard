@@ -2,7 +2,7 @@
 'use strict';
 const BASE = new URL('./', self.location.href);
 const CACHE_PREFIX = 'kanacard-shell-' + encodeURIComponent(BASE.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v15';
+const CACHE_NAME = CACHE_PREFIX + 'v16';
 const SHELL = [
  'index.html','style.css','lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','content-config.js','world-config.js','core.js','world.js','world-view.js','world-art.js','music.js','combat-actor.js','monsters.js','word-effects.js','reading-combat.js','app.js','pwa.js','viewport.js','motion-preview.html','manifest.webmanifest',
  'icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png','icons/apple-touch-icon.png'
