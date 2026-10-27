@@ -3,6 +3,9 @@ const elements=new Map(),storage=new Map(),timers=[],listeners={};
 function element(){const classes=new Set(['hidden']);return{dataset:{},disabled:false,innerHTML:'',textContent:'',classList:{add:c=>classes.add(c),remove:c=>classes.delete(c),toggle(c,on){on?classes.add(c):classes.delete(c)},contains:c=>classes.has(c)},setAttribute(){},querySelector(){return null},querySelectorAll(){return[]},focus(){}};}
 const document={activeElement:null,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},querySelectorAll(){return[]},addEventListener(type,handler){listeners[type]=handler;}};
 const ctx={document,console,Date:{now:()=>100000},setTimeout:fn=>{timers.push(fn);return timers.length},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
+const spoken=[];let speechCancels=0;
+ctx.SpeechSynthesisUtterance=function(text){this.text=text;};
+ctx.speechSynthesis={cancel(){speechCancels++;},speak(utterance){spoken.push(utterance);}};
 const scripts=['lessons.js','portraits.js','gear-config.js','gear.js','gear-view.js','world-config.js','core.js','content-config.js','world.js','world-view.js','world-art.js','monsters.js','combat-actor.js','word-effects.js','reading-combat.js','recall.js','app.js'];
 for(const file of scripts)vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ctx,{filename:file});
 function check(code){vm.runInContext(code,ctx);}
@@ -14,7 +17,13 @@ if($('screen').innerHTML.includes('hand-slot')||$('screen').innerHTML.includes('
 if(!$('screen').innerHTML.includes('reading-panel')||!$('screen').innerHTML.includes('data-answer='))throw Error('inline question absent');
 const firstPrompt=run.pending.question.prompt;const firstHp=run.hp;answer(run.pending.question.choices.indexOf(run.pending.question.answer));if(!battleFx||!run.pending.result.fast)throw Error('automatic fast attack');if(!$('screen').innerHTML.includes('reading-panel')||!$('screen').innerHTML.includes(firstPrompt)||!$('screen').innerHTML.includes('word-volley')||!$('modal').classList.contains('hidden'))throw Error('prompt and attack must stay together');
 `);
+assert.equal(spoken.length,1,'correct reading attack speaks once');
+assert.equal(spoken[0].text,vm.runInContext('run.pending.question.speech',ctx));
+assert.equal(spoken[0].lang,'ja-JP');
+const cancelsAfterAttack=speechCancels;
 assert.equal(timers.length,1);timers.shift()();
+assert.equal(speechCancels,cancelsAfterAttack,'next question must not cut off attack speech');
+assert.equal(spoken.length,1,'next prompt must not be spoken automatically');
 check(`if(run.phase!=='question'||run.hp!==firstHp||run.fastCombo!==1)throw Error('next question without counter');
 const wrong=run.pending.question.choices.findIndex(a=>a!==run.pending.question.answer);answer(wrong);if(run.phase!=='feedback'||battleFx||run.pending.result.damage!==0||run.fastCombo!==0)throw Error('wrong feedback');
 if(!run.reviewQueue.length)throw Error('review queue');continueCard();if(!battleFx)throw Error('counter animation');if(!$('screen').innerHTML.includes('reading-panel')||!$('screen').innerHTML.includes('정답을 확인'))throw Error('counter hides review');`);
@@ -135,3 +144,8 @@ for(let i=0;i<12;i++){R.ask(run,{answer:'a',keys:['0-0'],fast:true,diagnostic:tr
 if(run.length!==2||(run.readingRecent||[]).length)throw Error('diagnosis inflated adaptive length');
 `,ctx);
 console.log('PASS: single-letter checks do not inflate automatic bundle difficulty');
+
+const mutedCount=spoken.length;
+check(`sound=false;playBattleFx({kind:'slash',word:'あいう',label:'',caption:''},()=>{});`);
+timers.shift()();assert.equal(spoken.length,mutedCount,'muted attacks stay silent');
+console.log('PASS: reading attack pronunciation, uninterrupted speech across questions, and mute');
