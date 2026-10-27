@@ -17,6 +17,7 @@ if($('screen').innerHTML.includes('hand-slot')||$('screen').innerHTML.includes('
 if(!$('screen').innerHTML.includes('reading-panel')||!$('screen').innerHTML.includes('data-answer='))throw Error('inline question absent');
 const firstPrompt=run.pending.question.prompt;const firstHp=run.hp;answer(run.pending.question.choices.indexOf(run.pending.question.answer));if(!battleFx||!run.pending.result.fast)throw Error('automatic fast attack');if(!$('screen').innerHTML.includes('reading-panel')||!$('screen').innerHTML.includes(firstPrompt)||!$('screen').innerHTML.includes('word-volley')||!$('modal').classList.contains('hidden'))throw Error('prompt and attack must stay together');
 `);
+assert(elements.get('screen').innerHTML.includes('reading-strike'),'correct answer enables the sword action');
 assert.equal(spoken.length,1,'correct reading attack speaks once');
 assert.equal(spoken[0].text,vm.runInContext('run.pending.question.speech',ctx));
 assert.equal(spoken[0].lang,'ja-JP');
@@ -26,6 +27,7 @@ assert.equal(speechCancels,cancelsAfterAttack,'next question must not cut off at
 assert.equal(spoken.length,1,'next prompt must not be spoken automatically');
 check(`if(run.phase!=='question'||run.hp!==firstHp||run.fastCombo!==1)throw Error('next question without counter');
 const wrong=run.pending.question.choices.findIndex(a=>a!==run.pending.question.answer);answer(wrong);if(run.phase!=='feedback'||battleFx||run.pending.result.damage!==0||run.fastCombo!==0)throw Error('wrong feedback');
+if($('screen').innerHTML.includes('reading-strike'))throw Error('wrong answer triggered sword action');
 if(!run.reviewQueue.length)throw Error('review queue');continueCard();if(!battleFx)throw Error('counter animation');if(!$('screen').innerHTML.includes('reading-panel')||!$('screen').innerHTML.includes('정답을 확인'))throw Error('counter hides review');`);
 timers.shift()();
 check(`if(run.hp>=firstHp||run.phase!=='question')throw Error('counter and resume');

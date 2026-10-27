@@ -471,3 +471,85 @@ body[data-region="mountain"] .monster-sprite{filter:drop-shadow(0 0 8px #a9edff6
 .gear-slot-filters { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
 .gear-slot-filters [aria-pressed="true"] { border-color: #dbbf82; background: #3b4536; color: #f4dfab; }
 .gear-item.is-equipped { box-shadow: inset 0 0 0 2px #d5e4b4, 0 0 12px #9bbd7930; }
+
+
+/* Reserve an approach lane in every reading battle, including landscape. */
+.combat-view .combat-layout.reading-battle .battlefield {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30% minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: end;
+  padding-inline: 4%;
+}
+.combat-view .reading-battle .battlefield .unit {
+  grid-row: 1;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding-inline: 0;
+  justify-self: center;
+}
+.combat-view .reading-battle .battlefield .hero-unit { grid-column: 1; }
+.combat-view .reading-battle .battlefield .enemy-unit { grid-column: 3; }
+.combat-view .reading-battle .hero-actor,
+.combat-view .reading-battle .enemy-unit > svg { max-width: 100%; }
+
+/* A half-second sword cast: wind up, advance, strike, then recover. */
+.reading-battle .battlefield.reading-strike .hero-actor {
+  animation: reading-sword-step .5s both !important;
+}
+.reading-battle .reading-strike .rig-torso { animation: rig-body .5s both; }
+.reading-battle .reading-strike .rig-arm { animation: rig-swing .5s both; }
+.reading-battle .reading-strike .rig-wrist { animation: rig-snap .5s both; }
+.reading-battle .reading-strike .rig-head { animation: rig-head .5s both; }
+.reading-battle .reading-strike .rig-leg.front { animation: rig-step .5s both !important; }
+.reading-battle .reading-strike .rig-leg.rear { animation: rig-push .5s both !important; }
+.reading-battle .reading-strike .rig-cape { animation: rig-cape .5s both; }
+.reading-battle .reading-strike .dash-streak {
+  display: block;
+  animation: dash-wake .5s both;
+}
+.reading-battle .reading-strike .fx-cut-arc {
+  display: block;
+  left: var(--impact-x, 75%);
+  top: var(--impact-y, 45%);
+  width: clamp(70px, 14vw, 150px);
+  height: clamp(60px, 12vw, 120px);
+  border-width: 7px;
+  animation: contact-arc .19s .28s both;
+}
+.reading-battle .reading-strike .fx-speed-lines { display: block; animation: speed-rush .16s .09s both; }
+.reading-battle .reading-strike .enemy-unit > svg { animation: reading-impact .2s .29s both; }
+.reading-battle .reading-strike.enemy-falling .enemy-unit > svg { animation: contact-defeat .35s .34s both; }
+.reading-battle .reading-strike .fx-number { animation-duration: .2s; }
+.reading-battle .reading-strike .fx-combo .fx-slash.second,
+.reading-battle .reading-strike .critical-hit .fx-slash.second {
+  display: block;
+  animation-duration: .15s;
+  animation-delay: .32s;
+}
+.reading-battle .reading-strike :is(.fx-combo, .critical-hit) .fx-cut-arc {
+  border-top-color: #fff3bd;
+  border-right-color: #ffc76b;
+  filter: drop-shadow(0 0 12px #ffc76b);
+}
+@keyframes reading-sword-step {
+  0%, 100% { transform: none; }
+  15% { transform: translateX(-6px) rotate(-5deg); }
+  30%, 56% { transform: translateX(calc(var(--dash-distance, 100px) * .22)) rotate(5deg); }
+  78% { transform: translateX(3px) rotate(-2deg); }
+}
+@keyframes reading-impact {
+  0% { transform: translateX(6px) rotate(4deg); filter: brightness(2); }
+  35% { transform: translateX(12px) rotate(7deg); }
+  70% { transform: translateX(-2px) rotate(-2deg); }
+  100% { transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reading-battle .battlefield.reading-strike,
+  .reading-battle .battlefield.reading-strike .hero-actor,
+  .reading-battle .reading-strike .fighter-rig *,
+  .reading-battle .reading-strike .enemy-unit > svg { animation: none !important; }
+  .reading-battle .reading-strike :is(.fx-cut-arc, .fx-speed-lines, .dash-streak, .fx-slash) { display: none !important; }
+}
