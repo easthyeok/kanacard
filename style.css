@@ -553,3 +553,14 @@ body[data-region="mountain"] .monster-sprite{filter:drop-shadow(0 0 8px #a9edff6
   .reading-battle .reading-strike .enemy-unit > svg { animation: none !important; }
   .reading-battle .reading-strike :is(.fx-cut-arc, .fx-speed-lines, .dash-streak, .fx-slash) { display: none !important; }
 }
+
+/* Equipment shares its silhouette between loot icons, try-on and battle joints. */
+.equipped-armor { filter: drop-shadow(0 2px 1px #11182788); }
+.equipped-helm { filter: drop-shadow(0 1px 1px #11182766); }
+.boss-forged { paint-order: stroke fill; }
+.gear-runes { filter: drop-shadow(0 0 2px currentColor); }
+.enhanced-weapon .gear-runes { animation: gear-rune-pulse 2.4s ease-in-out infinite alternate; }
+.empty-equipment { opacity: .28; filter: grayscale(1); }
+.gear-appearance-note { font-size: 12px; color: #e8c995; letter-spacing: .03em; }
+@keyframes gear-rune-pulse { from { opacity: .55; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .enhanced-weapon .gear-runes { animation: none; } }

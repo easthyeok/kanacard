@@ -18,3 +18,28 @@ for(const g of C.grades){const rolled=Q.roll('boss','balrog',4,()=>.2,g.id);asse
 console.log('PASS: each equipment grade rolls its configured number of distinct options');
 const low={slot:'weapon',grade:'common',region:0,roll:1,level:0,options:{}};assert(Q.stats(low,1).attack>Q.stats(low,0).attack);
 console.log('PASS: first enhancement visibly increases even a common weapon stat');
+// Old inventory items gain a consistent appearance without adding save fields.
+ctx.KanaGame=G;
+vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../combat-actor.js'),'utf8'),ctx);
+const looks=Q.fresh(),weaponNames=new Set(),armorNames=new Set(),weaponShapes=new Set(),armorShapes=new Set();
+for(const origin of ['field','boss'])for(let region=0;region<6;region++){
+ const load={};
+ for(const slot of ['weapon','armor','charm']){
+  const it=Q.add(looks,{slot,origin,region,grade:'legendary',level:0,roll:4,options:{}});load[slot]=it;
+  const restored=Q.normalize(JSON.parse(JSON.stringify(looks))).items.find(x=>x.id===it.id);
+  assert.equal(Q.name(it),Q.name(restored));assert.deepEqual(Q.appearance(it),Q.appearance(restored));
+  assert.equal(Q.appearance({...it,level:10}).type,Q.appearance(it).type);
+ }
+ weaponNames.add(Q.appearance(load.weapon).type);armorNames.add(Q.appearance(load.armor).type);
+ weaponShapes.add(Q.weaponArt(load.weapon));armorShapes.add(Q.armorArt(load.armor));
+ const actor=ctx.combatActor({...G.HEROES[0],archetype:'warrior'},load);
+ assert(actor.includes(Q.weaponArt(load.weapon)));assert(actor.includes(Q.armorArt(load.armor)));assert(actor.includes(Q.helmArt(load.armor)));
+ assert(ctx.KanaGearView.art(load.weapon).includes(Q.weaponArt(load.weapon)));
+ assert(ctx.KanaGearView.art(load.armor).includes(Q.armorArt(load.armor)));
+ assert(!actor.includes('undefined'));assert(!actor.includes('NaN'));
+ assert(!Q.weaponArt(load.weapon).includes('gear-runes'));
+ assert(Q.weaponArt({...load.weapon,level:5}).includes('gear-runes'));
+ assert.notEqual(Q.weaponArt({...load.weapon,level:5}),Q.weaponArt({...load.weapon,level:10}));
+}
+assert.equal(weaponNames.size,12);assert.equal(armorNames.size,12);assert.equal(weaponShapes.size,12);assert.equal(armorShapes.size,12);
+console.log('PASS: 12 weapon/armor silhouettes, legacy save stability, shared inventory/battle art, helmets and enhancement tiers');
