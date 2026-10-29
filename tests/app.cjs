@@ -235,3 +235,23 @@ tq=timedFixture();persist();if(JSON.parse(localStorage.getItem('kanacard-save-v4
 run.phase='challenge';run.challenge={question:makeQuestion(),answered:0,correct:0};run.gold=0;render();run.challenge.question.startedAt=94000;updateReadingClock();if(!run.challenge.question.timedOut||run.challenge.result.ok||run.challenge.answered!==1)throw Error('challenge deadline');
 `,ctx);
 console.log('PASS: visible clock, preserved deadline, fast/slow/hinted recall, late clicks, automatic timeout, exactly-once grading and timed challenge');
+vm.runInContext(`
+ stage=0;run=G.createRun('mage',0,46,3);stats.confusions={};
+ const pool=kanaPool(),shi=pool.find(c=>c.glyph==='シ'),tsu=pool.find(c=>c.glyph==='ツ');
+ const source={keys:[shi.key],answer:shi.reading,choices:[shi.reading,tsu.reading],choiceKeys:{[shi.reading]:[shi.key],[tsu.reading]:[tsu.key]}};
+ recordRecall(source,false,tsu.reading);
+ const id=[shi.key,tsu.key].sort().join('|');
+ if(stats.confusions[id]?.misses!==1)throw Error('selected answer not recorded');
+ let found=0;
+ for(let n=0;n<200;n++){
+  const q=makeQuestion();
+  if(!q.confusionPair)continue;
+  found++;
+  if(q.keys.length!==1||q.choices.length!==4||!q.choices.includes(shi.reading)||!q.choices.includes(tsu.reading)||!q.diagnostic)throw Error('pair drill');
+  if(!q.choiceKeys[q.answer]||!q.targeted)throw Error('pair metadata');
+ }
+ if(!found)throw Error('no confusion review');
+ if(!learningPanel().includes('シ ↔ ツ'))throw Error('confusion panel');
+ persist();if(JSON.parse(localStorage.getItem('kanacard-save-v4')).stats.confusions[id].misses!==1)throw Error('pair persistence');
+`,ctx);
+console.log('PASS: selected distractor tracking, pair drills include both readings, diagnostic pacing, summary and canonical persistence');
